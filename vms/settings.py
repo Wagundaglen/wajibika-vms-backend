@@ -42,6 +42,9 @@ INSTALLED_APPS = [
     'accounts',
     'tasks',
     'communication',
+    'training',
+    'feedback',
+    'recognition.apps.RecognitionConfig',
 ]
 
 MIDDLEWARE = [

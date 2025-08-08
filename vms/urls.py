@@ -22,5 +22,9 @@ urlpatterns = [
     path('api/accounts/', include('accounts.urls')),
     path('api/tasks/', include('tasks.urls')),
     path('api/notifications/', include('communication.urls')),
+    path('api/training/', include('training.urls')),
+    path('api/feedback/', include('feedback.urls')),
+    path('api/recognition/', include('recognition.urls')),
+
 ]
 
