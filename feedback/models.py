@@ -1,7 +1,4 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
@@ -25,12 +22,14 @@ class Feedback(models.Model):
         related_name='feedback_received'
     )
     message = models.TextField()
+    response = models.TextField(blank=True, null=True)  # Admin reply
     anonymous = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        # If anonymous, hide sender
+        # Hide sender if anonymous
         if self.anonymous:
             self.from_user = None
         super().save(*args, **kwargs)
