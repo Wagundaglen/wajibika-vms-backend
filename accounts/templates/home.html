@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Home{% endblock %}
+{% block content %}
+
+<!-- AOS CSS -->
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+<!-- Hero Section -->
+<section role="banner"
+         class="hero text-white d-flex align-items-center"
+         style="background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
+                        url('https://images.pexels.com/photos/8060302/pexels-photo-8060302.jpeg') center/cover no-repeat;
+                min-height: 88vh; background-attachment: fixed;">
+    <div class="container text-center" data-aos="fade-up" data-aos-duration="1100">
+        <h1 class="display-3 fw-bold mb-3 hero-heading">
+            Welcome to Wajibika Initiative 
+        </h1>
+
+        <p class="lead mb-4 fs-5">Together, we create sustainable impact through volunteerism, education, and compassion.</p>
+
+        <div class="d-inline-flex gap-3">
+            <a href="{% url 'register_form' %}" class="btn btn-success btn-lg shadow-sm hero-btn" data-aos="zoom-in" data-aos-delay="250">
+                <i class="bi bi-person-plus-fill me-2"></i> Join as a Volunteer
+            </a>
+            <a href="{% url 'donate' %}" class="btn btn-warning btn-lg shadow-sm hero-btn" data-aos="zoom-in" data-aos-delay="400">
+                <i class="fas fa-donate me-2"></i> Donate Now
+            </a>
+        </div>
+
+        <!-- subtle scroll chevron -->
+        <div class="mt-5" data-aos="fade-up" data-aos-delay="700" aria-hidden="true">
+            <div class="animate-bounce">
+                <i class="bi bi-chevron-double-down display-6"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Mission Statement -->
+<section class="py-5 bg-light">
+    <div class="container text-center" data-aos="fade-up">
+        <h2 class="text-success fw-bold mb-3">Our Mission</h2>
+        <p class="fs-5 text-muted mx-auto" style="max-width: 900px;">
+            Wajibika Initiative is dedicated to empowering lives through volunteer-driven programs that address
+            education, healthcare, environment and community welfare in Nairobi and beyond. We partner with local
+            communities to deliver sustainable, measurable impact.
+        </p>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="py-5">
+    <div class="container text-center">
+        <h2 class="text-success mb-4" data-aos="fade-up">How It Works</h2>
+        <div class="row g-4">
+            <div class="col-md-3" data-aos="zoom-in" data-aos-delay="100">
+                <div class="p-4 bg-white rounded shadow-sm hover-card h-100">
+                    <i class="bi bi-person-plus display-4 text-warning"></i>
+                    <h5 class="mt-3 fw-bold">Sign Up</h5>
+                    <p class="mb-0">Register as a volunteer and join our network.</p>
+                </div>
+            </div>
+            <div class="col-md-3" data-aos="zoom-in" data-aos-delay="200">
+                <div class="p-4 bg-white rounded shadow-sm hover-card h-100">
+                    <i class="bi bi-clipboard-check display-4 text-warning"></i>
+                    <h5 class="mt-3 fw-bold">Get Trained</h5>
+                    <p class="mb-0">Learn the skills needed to make an impact.</p>
+                </div>
+            </div>
+            <div class="col-md-3" data-aos="zoom-in" data-aos-delay="300">
+                <div class="p-4 bg-white rounded shadow-sm hover-card h-100">
+                    <i class="bi bi-people display-4 text-warning"></i>
+                    <h5 class="mt-3 fw-bold">Join a Project</h5>
+                    <p class="mb-0">Be part of community programs across Nairobi.</p>
+                </div>
+            </div>
+            <div class="col-md-3" data-aos="zoom-in" data-aos-delay="400">
+                <div class="p-4 bg-white rounded shadow-sm hover-card h-100">
+                    <i class="bi bi-heart-fill display-4 text-warning"></i>
+                    <h5 class="mt-3 fw-bold">Change Lives</h5>
+                    <p class="mb-0">Help create lasting positive change.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Impact -->
+<section class="py-5 bg-light">
+    <div class="container text-center">
+        <h2 class="text-success mb-4" data-aos="fade-up">Our Impact</h2>
+        <div class="row g-4">
+            <div class="col-md-4" data-aos="flip-left" data-aos-delay="150">
+                <div class="card shadow-sm border-0 hover-card">
+                    <div class="card-body">
+                        <i class="bi bi-people-fill display-4 text-warning"></i>
+                        <h3 class="mt-2 fw-bold"><span class="counter" data-target="500">0</span>+</h3>
+                        <p>Active Volunteers</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4" data-aos="flip-left" data-aos-delay="250">
+                <div class="card shadow-sm border-0 hover-card">
+                    <div class="card-body">
+                        <i class="bi bi-briefcase-fill display-4 text-warning"></i>
+                        <h3 class="mt-2 fw-bold"><span class="counter" data-target="38">0</span>+</h3>
+                        <p>Projects Completed</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4" data-aos="flip-left" data-aos-delay="350">
+                <div class="card shadow-sm border-0 hover-card">
+                    <div class="card-body">
+                        <i class="bi bi-geo-alt-fill display-4 text-warning"></i>
+                        <h3 class="mt-2 fw-bold"><span class="counter" data-target="30">0</span>+</h3>
+                        <p>Communities Served</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials -->
+<section class="py-5">
+    <div class="container text-center">
+        <h2 class="text-success mb-4" data-aos="fade-up">What Our Volunteers Say</h2>
+        <div class="row g-4">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <img src="https://images.pexels.com/photos/32219928/pexels-photo-32219928.jpeg" alt="Volunteer" class="rounded-circle mb-3 shadow" width="90" height="90">
+                <p class="fst-italic">"Volunteering with Wajibika has been life-changing!"</p>
+                <h6 class="fw-bold">Mary W.</h6>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <img src="https://images.pexels.com/photos/14672980/pexels-photo-14672980.jpeg" alt="Volunteer" class="rounded-circle mb-3 shadow" width="90" height="90">
+                <p class="fst-italic">"I’ve seen real change in my community thanks to Wajibika."</p>
+                <h6 class="fw-bold">James K.</h6>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                <img src="https://images.pexels.com/photos/28075121/pexels-photo-28075121.jpeg" alt="Volunteer" class="rounded-circle mb-3 shadow" width="90" height="90">
+                <p class="fst-italic">"It feels good to be part of a purpose-driven team."</p>
+                <h6 class="fw-bold">Sarah N.</h6>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- AOS Script -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+<!-- Custom Scripts: typewriter, counters, small parallax -->
+<script>
+    // Init AOS
+    document.addEventListener('DOMContentLoaded', function () {
+        AOS.init({ once: true, duration: 850 });
+    });
+
+
+    // Counter animation - IntersectionObserver + requestAnimationFrame
+    (function counters() {
+        const counters = document.querySelectorAll('.counter');
+        if (!counters.length) return;
+
+        const options = { threshold: 0.5 };
+        const animate = (el, target) => {
+            let start = null;
+            const duration = 1400;
+            const from = 0;
+            const to = target;
+            function step(timestamp) {
+                if (!start) start = timestamp;
+                const progress = Math.min((timestamp - start) / duration, 1);
+                el.textContent = Math.floor(progress * (to - from) + from);
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    el.textContent = to;
+                }
+            }
+            requestAnimationFrame(step);
+        };
+
+        const obs = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const el = entry.target;
+                    const target = parseInt(el.getAttribute('data-target'), 10) || 0;
+                    animate(el, target);
+                    observer.unobserve(el);
+                }
+            });
+        }, options);
+
+        counters.forEach(c => obs.observe(c));
+    })();
+
+    // Simple subtle parallax for hero background (desktop only)
+    (function heroParallax() {
+        const hero = document.querySelector('.hero');
+        if (!hero) return;
+        // disable on small screens
+        if (window.innerWidth < 768) return;
+        window.addEventListener('scroll', function () {
+            const scrolled = window.pageYOffset;
+            // move background slightly
+            hero.style.backgroundPositionY = `${Math.max(-50, scrolled * 0.2)}px`;
+        }, { passive: true });
+    })();
+</script>
+
+<!-- Styles -->
+<style>
+    /* typed cursor */
+    .typed::after {
+        content: "|";
+        margin-left: 6px;
+        opacity: 0.8;
+        animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+        50% { opacity: 0; }
+    }
+
+    /* Hero button styles */
+    .hero-btn { transition: transform .25s ease, box-shadow .25s ease; }
+    .hero-btn:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.25); }
+
+    /* Hover card */
+    .hover-card { transition: transform .28s ease, box-shadow .28s ease; }
+    .hover-card:hover { transform: translateY(-8px); box-shadow: 0 18px 40px rgba(0,0,0,0.12); }
+
+    /* little chevron bounce */
+    .animate-bounce { animation: bounce 2s infinite; color: rgba(255,255,255,0.9); }
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(8px); }
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 767px) {
+        .hero { background-attachment: scroll !important; min-height: 60vh; }
+        .display-3 { font-size: 2rem; }
+    }
+</style>
+
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}Choose Payment Method - Wajibika Initiative{% endblock %}
+
+{% block content %}
+<style>
+    .payment-hero {
+        background: linear-gradient(135deg, #28a745, #218838);
+        color: white;
+        padding: 50px 20px;
+        border-radius: 12px;
+        margin-bottom: 40px;
+    }
+    .donation-amounts button {
+        border-radius: 50px;
+        padding: 10px 25px;
+        font-size: 1.1rem;
+    }
+    .payment-card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0px 8px 20px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        text-align: center;
+        min-width: 250px;
+    }
+    .payment-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0px 12px 25px rgba(0,0,0,0.15);
+    }
+    .payment-card i {
+        font-size: 3rem;
+        margin-bottom: 15px;
+    }
+    .back-link {
+        display: inline-block;
+        margin-top: 30px;
+        color: #555;
+        text-decoration: none;
+    }
+    .back-link:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<section class="container text-center">
+    <!-- Hero Section -->
+    <div class="payment-hero">
+        <h1 class="fw-bold mb-3">Choose Your Payment Method</h1>
+        <p class="lead mb-0">Your contribution helps us change lives and build stronger communities.  
+        Select your donation amount and preferred payment option below.</p>
+    </div>
+
+    <!-- Donation Amount Selection -->
+    <div class="mb-5">
+        <h4 class="fw-bold mb-3">Select Amount</h4>
+        <div class="donation-amounts d-flex flex-wrap justify-content-center gap-3 mb-3">
+            <button class="btn btn-outline-success" onclick="setAmount(500)">KES 500</button>
+            <button class="btn btn-outline-success" onclick="setAmount(1000)">KES 1,000</button>
+            <button class="btn btn-outline-success" onclick="setAmount(2500)">KES 2,500</button>
+            <button class="btn btn-outline-success" onclick="setAmount(5000)">KES 5,000</button>
+        </div>
+        <input type="number" id="custom-amount" class="form-control w-25 mx-auto text-center" 
+               placeholder="Or enter custom amount (KES)" min="50">
+    </div>
+
+    <!-- Payment Options -->
+    <div class="d-flex flex-wrap justify-content-center gap-4">
+        <!-- PayPal Card -->
+        <a id="paypal-link" href="{{ paypal_link }}" target="_blank" class="payment-card text-decoration-none text-dark">
+            <i class="fab fa-paypal text-primary"></i>
+            <h4 class="fw-bold">Donate via PayPal</h4>
+            <p class="text-muted mb-0">Quick & secure international payments.</p>
+        </a>
+
+        <!-- M-Pesa Card -->
+        <a id="mpesa-link" href="{{ mpesa_link }}" target="_blank" class="payment-card text-decoration-none text-dark">
+            <i class="fas fa-mobile-alt text-success"></i>
+            <h4 class="fw-bold">Donate via M-Pesa</h4>
+            <p class="text-muted mb-0">Fast & safe mobile money transfers.</p>
+        </a>
+    </div>
+
+    <!-- Back Link -->
+    <a href="{% url 'donate' %}" class="back-link">&larr; Back to Donation Page</a>
+</section>
+
+<script>
+    function setAmount(amount) {
+        document.getElementById("custom-amount").value = amount;
+        updateLinks(amount);
+    }
+
+    function updateLinks(amount) {
+        if (!amount || amount < 50) return; // prevent invalid amounts
+
+        // Example logic: Append ?amount= to payment URLs
+        let paypalBase = "{{ paypal_link }}";
+        let mpesaBase = "{{ mpesa_link }}";
+
+        document.getElementById("paypal-link").href = paypalBase + "?amount=" + amount;
+        document.getElementById("mpesa-link").href = mpesaBase + "?amount=" + amount;
+    }
+
+    // Update links when custom amount is entered
+    document.getElementById("custom-amount").addEventListener("input", function() {
+        updateLinks(this.value);
+    });
+</script>
+{% endblock %}

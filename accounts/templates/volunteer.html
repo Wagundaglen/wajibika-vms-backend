@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Volunteer - Wajibika Initiative{% endblock %}
+{% block content %}
+<section class="py-5 text-center">
+    <div class="container">
+        <h1 class="text-success mb-4">Join Our Volunteer Community</h1>
+        <p class="lead">Your time, skills, and passion can help transform communities. We welcome volunteers from all walks of life — no matter your background or experience, there’s a place for you here.</p>
+        <img src="https://images.pexels.com/photos/1102609/pexels-photo-1102609.jpeg" alt="Volunteering" class="img-fluid rounded shadow mb-4">
+        <p>As a volunteer with Wajibika Initiative, you'll participate in impactful projects — from education outreach and healthcare drives to environmental clean-ups and youth mentorship programs.</p>
+        <a href="{% url 'register_form' %}" class="btn btn-success btn-lg mt-3">Sign Up to Volunteer</a>
+    </div>
+</section>
+{% endblock %}

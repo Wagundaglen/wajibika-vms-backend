@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+
+<!-- Header Banner -->
+<section class="profile-banner text-center text-white py-5"
+    style="background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
+           url('https://images.pexels.com/photos/5662849/pexels-photo-5662849.png') center/cover no-repeat;">
+    <div class="container">
+        <div class="profile-image-wrapper mb-3">
+            {% if user.profile_picture %}
+                <img src="{{ user.profile_picture.url }}"
+                     alt="Profile Picture"
+                     class="rounded-circle border border-3 border-light shadow-lg profile-avatar"
+                     width="150" height="150">
+            {% else %}
+                <img src="https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username }}&background=28a745&color=fff&size=150"
+                     alt="Profile Picture"
+                     class="rounded-circle border border-3 border-light shadow-lg profile-avatar">
+            {% endif %}
+        </div>
+        <h1 class="fw-bold">{{ user.get_full_name|default:user.username }}</h1>
+        {% if user.bio %}
+            <p class="lead mb-1">{{ user.bio }}</p>
+        {% else %}
+            <p class="lead mb-1">Dedicated Wajibika Volunteer</p>
+        {% endif %}
+        {% if user.role %}
+            <span class="badge bg-warning text-dark px-3 py-2 shadow-sm">{{ user.role }}</span>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Profile Details -->
+<div class="container my-5">
+    <div class="row g-4">
+        <!-- Account Information -->
+        <div class="col-lg-8">
+            <div class="card shadow border-0 h-100">
+                <div class="card-body">
+                    <h4 class="text-success mb-4"><i class="bi bi-person-circle me-2"></i>Account Information</h4>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item"><strong>Username:</strong> {{ user.username }}</div>
+                        <div class="list-group-item"><strong>Full Name:</strong> {{ user.first_name }} {{ user.last_name }}</div>
+                        <div class="list-group-item"><strong>Email:</strong> {{ user.email }}</div>
+                        {% if user.phone %}
+                            <div class="list-group-item"><strong>Phone:</strong> {{ user.phone }}</div>
+                        {% endif %}
+                        {% if user.skills %}
+                            <div class="list-group-item"><strong>Skills:</strong> {{ user.skills }}</div>
+                        {% endif %}
+                        {% if user.address %}
+                            <div class="list-group-item"><strong>Address:</strong> {{ user.address }}</div>
+                        {% endif %}
+                        {% if user.date_of_birth %}
+                            <div class="list-group-item"><strong>Date of Birth:</strong> {{ user.date_of_birth }}</div>
+                        {% endif %}
+                        <div class="list-group-item"><strong>Joined:</strong> {{ user.date_joined|date:"F j, Y" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions & Links -->
+        <div class="col-lg-4">
+            <div class="card shadow border-0 h-100">
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <h5 class="mb-4 text-secondary">Quick Actions</h5>
+                    <a href="{% url 'logout_user' %}" class="btn btn-outline-danger mb-3">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                    <a href="{% url 'edit_profile' %}" class="btn btn-outline-success">
+                        <i class="bi bi-pencil-square"></i> Edit Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-avatar {
+    object-fit: cover;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.profile-avatar:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+</style>
+
+{% endblock %}

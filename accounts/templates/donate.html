@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Donate - Wajibika Initiative{% endblock %}
+
+{% block content %}
+<!-- AOS Animation CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
+
+<section class="py-5 text-center bg-light">
+    <div class="container">
+        <!-- Title with typing effect -->
+        <h1 id="typed-title" class="fw-bold text-success mb-3"></h1>
+        <p class="lead text-secondary mb-4" data-aos="fade-down" data-aos-delay="100">
+            Your generosity fuels our programs and enables us to reach more communities in need. 
+            Together, we can create sustainable change.
+        </p>
+
+        <!-- Banner Image -->
+        <img src="https://images.pexels.com/photos/19800837/pexels-photo-19800837.jpeg"
+             alt="Donate"
+             class="img-fluid rounded shadow-lg mb-5 w-100"
+             style="height: 500px; object-fit: cover;"
+             data-aos="zoom-in">
+
+        <!-- Impact Highlights in Slabs -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="impact-card p-4 bg-white rounded shadow h-100">
+                    <i class="fas fa-book-open fa-3x text-primary mb-3"></i>
+                    <h5 class="fw-bold">Education</h5>
+                    <p class="text-secondary">
+                        We provide books, school fees, and learning programs for children in need, giving them the tools to succeed.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="impact-card p-4 bg-white rounded shadow h-100">
+                    <i class="fas fa-stethoscope fa-3x text-danger mb-3"></i>
+                    <h5 class="fw-bold">Healthcare</h5>
+                    <p class="text-secondary">
+                        Donations supply essential medicines, vaccinations, and medical outreach to improve health outcomes.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="impact-card p-4 bg-white rounded shadow h-100">
+                    <i class="fas fa-hand-holding-heart fa-3x text-warning mb-3"></i>
+                    <h5 class="fw-bold">Community Support</h5>
+                    <p class="text-secondary">
+                        We fund clean water projects, food aid, and skill training initiatives that empower local communities.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Donation Call-to-Action -->
+        <p class="mb-4 fs-5" data-aos="fade-up">
+            Every contribution, no matter the size, helps us bring hope and change. 
+            Be part of something impactful.
+        </p>
+        <div class="mt-3" data-aos="zoom-in">
+            <a href="{% url 'payment_options' %}" 
+               class="btn btn-warning btn-lg px-5 shadow-sm donate-btn">
+                <i class="fas fa-donate me-2"></i> Donate Now
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- AOS Animation JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+<script>
+    AOS.init({
+        duration: 1000,
+        once: true
+    });
+</script>
+
+<!-- Typing Animation JS -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const text = "Support Our Mission";
+        let index = 0;
+        const title = document.getElementById("typed-title");
+
+        function type() {
+            if (index < text.length) {
+                title.textContent += text.charAt(index);
+                index++;
+                setTimeout(type, 100);
+            }
+        }
+        type();
+    });
+</script>
+
+<!-- Custom Styles -->
+<style>
+    /* Hover effect for slabs */
+    .impact-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .impact-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Button hover effect */
+    .donate-btn {
+        transition: transform 0.2s ease, background-color 0.3s ease;
+    }
+    .donate-btn:hover {
+        transform: scale(1.05);
+        background-color: #ffcd38;
+    }
+</style>
+{% endblock %}
