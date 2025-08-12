@@ -1,13 +1,85 @@
 {% extends 'base.html' %}
 {% block title %}Volunteer - Wajibika Initiative{% endblock %}
 {% block content %}
+<!-- AOS CSS -->
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
 <section class="py-5 text-center">
     <div class="container">
-        <h1 class="text-success mb-4">Join Our Volunteer Community</h1>
-        <p class="lead">Your time, skills, and passion can help transform communities. We welcome volunteers from all walks of life — no matter your background or experience, there’s a place for you here.</p>
-        <img src="https://images.pexels.com/photos/1102609/pexels-photo-1102609.jpeg" alt="Volunteering" class="img-fluid rounded shadow mb-4">
-        <p>As a volunteer with Wajibika Initiative, you'll participate in impactful projects — from education outreach and healthcare drives to environmental clean-ups and youth mentorship programs.</p>
-        <a href="{% url 'register_form' %}" class="btn btn-success btn-lg mt-3">Sign Up to Volunteer</a>
+        <h1 class="text-success mb-4" data-aos="fade-down" data-aos-duration="800">Join Our Volunteer Community</h1>
+        
+        <p class="lead mb-4" data-aos="fade-up" data-aos-duration="800" data-aos-delay="100">
+            Your time, skills, and passion can help transform communities. We welcome volunteers from all walks of life — no matter your background or experience, there’s a place for you here.
+        </p>
+
+        <img src="https://images.pexels.com/photos/1102609/pexels-photo-1102609.jpeg" alt="Volunteering" class="img-fluid rounded shadow mb-4" data-aos="zoom-in" data-aos-duration="900" data-aos-delay="150">
+
+        <p data-aos="fade-up" data-aos-duration="800" data-aos-delay="200">
+            As a volunteer with Wajibika Initiative, you'll participate in impactful projects — from education outreach and healthcare drives to environmental clean-ups and youth mentorship programs. 
+            Our volunteers are the heart of our work, helping us create meaningful change in Nairobi and beyond.
+        </p>
+
+        <h3 class="mt-5 text-success" data-aos="fade-right" data-aos-duration="800" data-aos-delay="300">Why Volunteer with Us?</h3>
+        <ul class="list-unstyled fs-5 mb-4" style="max-width: 700px; margin: auto; text-align: left;" data-aos="fade-left" data-aos-duration="800" data-aos-delay="350">
+            <li>✔️ Make a tangible difference in your community.</li>
+            <li>✔️ Gain new skills and valuable experience.</li>
+            <li>✔️ Connect with like-minded, passionate individuals.</li>
+            <li>✔️ Receive training and ongoing support from our team.</li>
+            <li>✔️ Build your network and enhance your resume.</li>
+            <li>✔️ Enjoy flexible volunteering opportunities to fit your schedule.</li>
+        </ul>
+
+        <h3 class="mt-5 text-success" data-aos="fade-right" data-aos-duration="800" data-aos-delay="400">Types of Volunteer Roles</h3>
+        <div class="row justify-content-center mb-4">
+            <div class="col-md-4" data-aos="zoom-in" data-aos-duration="800" data-aos-delay="450">
+                <div class="p-3 border rounded shadow-sm">
+                    <h5>Education & Tutoring</h5>
+                    <p>Help children and youth improve their literacy, numeracy, and life skills through workshops and mentoring.</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="zoom-in" data-aos-duration="800" data-aos-delay="500">
+                <div class="p-3 border rounded shadow-sm">
+                    <h5>Healthcare Support</h5>
+                    <p>Assist in health awareness campaigns, medical camps, and distribution of essential supplies.</p>
+                </div>
+            </div>
+            <div class="col-md-4" data-aos="zoom-in" data-aos-duration="800" data-aos-delay="550">
+                <div class="p-3 border rounded shadow-sm">
+                    <h5>Environment & Clean-ups</h5>
+                    <p>Participate in community clean-ups, tree planting, and promoting sustainable practices.</p>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="mt-5 text-success" data-aos="fade-right" data-aos-duration="800" data-aos-delay="600">Volunteer Stories</h3>
+        <div class="row justify-content-center">
+            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-duration="800" data-aos-delay="650">
+                <div class="p-3 border rounded shadow-sm">
+                    <p class="fst-italic">“Volunteering with Wajibika has given me a deeper connection to my community and a sense of purpose.”</p>
+                    <p class="fw-bold mb-0">– Angela M.</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-duration="800" data-aos-delay="700">
+                <div class="p-3 border rounded shadow-sm">
+                    <p class="fst-italic">“The training and support provided prepared me to confidently take on projects and make an impact.”</p>
+                    <p class="fw-bold mb-0">– David N.</p>
+                </div>
+            </div>
+        </div>
+
+        <a href="{% url 'register_form' %}" class="btn btn-success btn-lg mt-4" data-aos="zoom-in" data-aos-duration="800" data-aos-delay="750">Sign Up to Volunteer</a>
     </div>
 </section>
+
+<!-- AOS Script -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        AOS.init({
+            once: true,
+            duration: 700,
+            easing: 'ease-in-out',
+        });
+    });
+</script>
 {% endblock %}
