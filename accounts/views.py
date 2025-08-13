@@ -4,12 +4,13 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
 from django.views.decorators.csrf import csrf_exempt
+from tasks.models import Task
+from tasks.forms import TaskForm
 from .forms import VolunteerRegistrationForm, EditProfileForm
 
 User = get_user_model()
 
 # ---------- Static Page Views ----------
-
 def home(request):
     return render(request, "home.html")
 
@@ -20,11 +21,9 @@ def volunteer(request):
     return render(request, "volunteer.html")
 
 def donate(request):
-    """Initial donation page with 'Donate Now' button only."""
     return render(request, "donate.html")
 
 def payment_options(request):
-    """Page showing donation method options (PayPal / M-Pesa)."""
     context = {
         'paypal_link': 'https://www.paypal.com/donate?hosted_button_id=YOUR_PAYPAL_ID',
         'mpesa_link': 'https://m-pesapay.com/YOUR_MPESA_LINK',
@@ -33,60 +32,44 @@ def payment_options(request):
 
 @csrf_exempt
 def donate_process(request):
-    """
-    Handles simulated donation form submission (e.g., amount/phone).
-    You can later replace this with real integration.
-    """
     if request.method == "POST":
         amount = request.POST.get("amount")
         phone = request.POST.get("phone")
-
         if amount and phone:
-            messages.success(
-                request,
-                f"✅ Thank you for donating KES {amount}! "
-                f"A confirmation will be sent to {phone}."
-            )
+            messages.success(request, f"✅ Thank you for donating KES {amount}! Confirmation will be sent to {phone}.")
         else:
             messages.error(request, "⚠️ Please enter both amount and phone number.")
-
     return redirect("donate")
 
 def contact(request):
     return render(request, "contact.html")
 
-# ---------- Account Views ----------
 
+# ---------- Account Views ----------
 def register_form(request):
     if request.method == "POST":
         form = VolunteerRegistrationForm(request.POST, request.FILES)
         if form.is_valid():
             user = form.save(commit=False)
-
             role_group_map = {
                 "Volunteer": "Volunteers",
                 "Coordinator": "Coordinators",
                 "Admin": "Admins"
             }
             group_name = role_group_map.get(user.role)
-
             if user.role == "Admin":
                 user.is_staff = True
                 user.is_superuser = True
-
             user.save()
-
             if group_name:
                 group, _ = Group.objects.get_or_create(name=group_name)
                 user.groups.add(group)
-
             messages.success(request, "✅ Account created successfully! Please log in.")
             return redirect("login_form")
         else:
             messages.error(request, "⚠️ Please correct the errors below.")
     else:
         form = VolunteerRegistrationForm()
-
     return render(request, "accounts/register.html", {"form": form})
 
 def login_form(request):
@@ -94,11 +77,9 @@ def login_form(request):
         username = request.POST.get("username")
         password = request.POST.get("password")
         user = authenticate(request, username=username, password=password)
-
         if user:
             login(request, user)
             messages.success(request, f"👋 Welcome back, {user.username}!")
-
             if user.role == "Admin":
                 return redirect("admin_dashboard")
             elif user.role == "Coordinator":
@@ -109,7 +90,6 @@ def login_form(request):
                 return redirect("profile_page")
         else:
             messages.error(request, "❌ Invalid username or password.")
-
     return render(request, "accounts/login.html")
 
 @login_required
@@ -128,7 +108,6 @@ def edit_profile(request):
             messages.error(request, "⚠️ Please correct the errors below.")
     else:
         form = EditProfileForm(instance=request.user)
-
     return render(request, "accounts/edit_profile.html", {"form": form})
 
 @login_required
@@ -137,8 +116,8 @@ def logout_user(request):
     messages.info(request, "✅ You have been logged out.")
     return redirect("login_form")
 
-# ---------- Dashboard Views ----------
 
+# ---------- Dashboard Views ----------
 @login_required
 def admin_dashboard(request):
     return render(request, "dashboards/admin_dashboard.html")
@@ -162,12 +141,80 @@ def dashboard_redirect(request):
     else:
         return redirect("profile_page")
 
-# ---------- Modules ----------
 
+# ---------- Tasks Module ----------
 @login_required
 def tasks_module(request):
-    return render(request, "modules/tasks.html")
+    if request.user.role == "Admin":
+        tasks = Task.objects.all().order_by("-created_at")
+    elif request.user.role == "Coordinator":
+        tasks = Task.objects.filter(assigned_to__role="Volunteer").order_by("-created_at")
+    else:
+        tasks = Task.objects.filter(assigned_to=request.user).order_by("-created_at")
+    return render(request, "modules/tasks.html", {"tasks": tasks})
 
+@login_required
+def create_task(request):
+    if request.user.role not in ["Admin", "Coordinator"]:
+        messages.error(request, "You are not authorized to create tasks.")
+        return redirect("tasks_module")
+    if request.method == "POST":
+        form = TaskForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "✅ Task created successfully!")
+            return redirect("tasks_module")
+    else:
+        form = TaskForm()
+    return render(request, "modules/task_form.html", {"form": form, "title": "Create Task"})
+
+@login_required
+def edit_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    if request.user.role not in ["Admin", "Coordinator"]:
+        messages.error(request, "You are not authorized to edit tasks.")
+        return redirect("tasks_module")
+    if request.method == "POST":
+        form = TaskForm(request.POST, instance=task)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "✅ Task updated successfully!")
+            return redirect("tasks_module")
+    else:
+        form = TaskForm(instance=task)
+    return render(request, "modules/task_form.html", {"form": form, "title": "Edit Task"})
+
+@login_required
+def delete_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    if request.user.role not in ["Admin", "Coordinator"]:
+        messages.error(request, "You are not authorized to delete tasks.")
+        return redirect("tasks_module")
+    task.delete()
+    messages.success(request, "✅ Task deleted successfully!")
+    return redirect("tasks_module")
+
+# Volunteer task responses
+@login_required
+def accept_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id, assigned_to=request.user)
+    task.acceptance_status = "Accepted"
+    task.status = "In Progress"
+    task.save()
+    messages.success(request, "✅ You have accepted the task.")
+    return redirect("tasks_module")
+
+@login_required
+def reject_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id, assigned_to=request.user)
+    task.acceptance_status = "Rejected"
+    task.status = "Pending"
+    task.save()
+    messages.info(request, "❌ You have rejected the task.")
+    return redirect("tasks_module")
+
+
+# ---------- Other Modules ----------
 @login_required
 def recognition_module(request):
     return render(request, "modules/recognition.html")
@@ -188,8 +235,8 @@ def training_module(request):
 def reports_module(request):
     return render(request, "modules/reports.html")
 
-# ---------- Manage Users Module (Updated) ----------
 
+# ---------- Manage Users ----------
 @login_required
 def manage_users(request):
     if request.user.role != "Admin":
@@ -216,13 +263,15 @@ def delete_user(request, user_id):
         messages.error(request, "You are not authorized to perform this action.")
         return redirect("dashboard_redirect")
     user = get_object_or_404(User, id=user_id)
-    if user != request.user:  # Prevent self-delete
+    if user != request.user:
         user.delete()
         messages.success(request, f"User {user.username} has been deleted.")
     else:
         messages.error(request, "You cannot delete your own account.")
     return redirect("manage_users")
 
+
+# ---------- Settings ----------
 @login_required
 def settings_module(request):
     return render(request, "modules/settings.html")

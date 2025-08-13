@@ -39,4 +39,13 @@ urlpatterns = [
     path('modules/manage-users/<int:user_id>/toggle-status/', login_required(views.toggle_user_status), name='toggle_user_status'),
     path('modules/manage-users/<int:user_id>/delete/', login_required(views.delete_user), name='delete_user'),
     path('modules/settings/', login_required(views.settings_module), name='settings_module'),
+
+    # Task URLs
+    path('modules/tasks/create/', views.create_task, name='create_task'),
+    path('modules/tasks/edit/<int:task_id>/', views.edit_task, name='edit_task'),
+    path('modules/tasks/delete/<int:task_id>/', views.delete_task, name='delete_task'),
+
+    # Volunteer task actions
+    path('modules/tasks/<int:task_id>/accept/', views.accept_task, name='accept_task'),
+    path('modules/tasks/<int:task_id>/reject/', views.reject_task, name='reject_task'),
 ]
