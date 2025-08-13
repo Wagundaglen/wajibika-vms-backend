@@ -36,5 +36,7 @@ urlpatterns = [
     path('modules/training/', login_required(views.training_module), name='training_module'),
     path('modules/reports/', login_required(views.reports_module), name='reports_module'),
     path('modules/manage-users/', login_required(views.manage_users), name='manage_users'),
+    path('modules/manage-users/<int:user_id>/toggle-status/', login_required(views.toggle_user_status), name='toggle_user_status'),
+    path('modules/manage-users/<int:user_id>/delete/', login_required(views.delete_user), name='delete_user'),
     path('modules/settings/', login_required(views.settings_module), name='settings_module'),
 ]

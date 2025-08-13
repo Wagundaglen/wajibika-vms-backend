@@ -1,9 +1,8 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
-from django.contrib.auth import get_user_model
 from django.views.decorators.csrf import csrf_exempt
 from .forms import VolunteerRegistrationForm, EditProfileForm
 
@@ -189,9 +188,40 @@ def training_module(request):
 def reports_module(request):
     return render(request, "modules/reports.html")
 
+# ---------- Manage Users Module (Updated) ----------
+
 @login_required
 def manage_users(request):
-    return render(request, "modules/manage_users.html")
+    if request.user.role != "Admin":
+        messages.error(request, "You are not authorized to access this page.")
+        return redirect("dashboard_redirect")
+    users = User.objects.all().order_by("-date_joined")
+    return render(request, "modules/manage_users.html", {"users": users})
+
+@login_required
+def toggle_user_status(request, user_id):
+    if request.user.role != "Admin":
+        messages.error(request, "You are not authorized to perform this action.")
+        return redirect("dashboard_redirect")
+    user = get_object_or_404(User, id=user_id)
+    user.is_active = not user.is_active
+    user.save()
+    status = "activated" if user.is_active else "deactivated"
+    messages.success(request, f"User {user.username} has been {status}.")
+    return redirect("manage_users")
+
+@login_required
+def delete_user(request, user_id):
+    if request.user.role != "Admin":
+        messages.error(request, "You are not authorized to perform this action.")
+        return redirect("dashboard_redirect")
+    user = get_object_or_404(User, id=user_id)
+    if user != request.user:  # Prevent self-delete
+        user.delete()
+        messages.success(request, f"User {user.username} has been deleted.")
+    else:
+        messages.error(request, "You cannot delete your own account.")
+    return redirect("manage_users")
 
 @login_required
 def settings_module(request):
