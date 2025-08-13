@@ -4,6 +4,8 @@
 <div class="container my-5">
     <h1 class="text-success"><i class="bi bi-list-task"></i> Tasks</h1>
 
+    <p>User Role: {{ user.role }}</p>  {# Debug: Display user role #}
+
     {# Filter dropdown for Admin & Coordinator #}
     {% if user.role == "Admin" or user.role == "Coordinator" %}
     <div class="mb-3">
@@ -38,7 +40,7 @@
                 <td>{{ task.assigned_to.get_full_name }} ({{ task.assigned_to.role }})</td>
                 <td>{{ task.due_date }}</td>
                 <td>{{ task.status }}</td>
-                <td>{{ task.acceptance_status }}</td>
+                <td>{{ task.acceptance_status }}</td>  {# Debug: Display task acceptance status #}
                 <td>
                     {% if user.role == "Admin" or user.role == "Coordinator" %}
                         <a href="{% url 'edit_task' task.id %}" class="btn btn-warning btn-sm">Edit</a>

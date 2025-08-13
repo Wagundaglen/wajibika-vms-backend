@@ -1,10 +1,9 @@
-from rest_framework import generics, permissions
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.response import Response
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.contrib.auth import get_user_model
 from .models import Task
-from .serializers import TaskSerializer, TaskAcceptanceSerializer
 from communication.models import Notification
 
 User = get_user_model()
@@ -12,110 +11,69 @@ User = get_user_model()
 # ---------------------------
 # Admin creates tasks
 # ---------------------------
-class TaskCreateView(generics.CreateAPIView):
-    queryset = Task.objects.all()
-    serializer_class = TaskSerializer
-    permission_classes = [IsAdminUser]
-
-    def perform_create(self, serializer):
-        task = serializer.save()
-        # Notify the volunteer who was assigned the task
+@login_required
+def create_task_view(request):
+    if not request.user.is_staff:
+        raise PermissionDenied("You do not have permission to create tasks.")
+        
+    if request.method == "POST":
+        # Handle task creation logic here
+        task = Task.objects.create(
+            title=request.POST['title'],
+            description=request.POST['description'],
+            assigned_to=request.POST['assigned_to']
+        )
         Notification.objects.create(
             recipient=task.assigned_to,
             message=f"You have been assigned a new task: {task.title}"
         )
+        messages.success(request, "Task created successfully.")
+        return redirect('task_list')  # Replace with your task list URL
+
+    return render(request, 'tasks/create_task.html')  # Your task creation template
 
 # ---------------------------
 # Volunteer views their own tasks
 # ---------------------------
-class MyTasksView(generics.ListAPIView):
-    serializer_class = TaskSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return Task.objects.filter(assigned_to=self.request.user)
-
-# ---------------------------
-# Volunteer updates their own task status
-# ---------------------------
-class TaskStatusUpdateView(generics.UpdateAPIView):
-    queryset = Task.objects.all()
-    serializer_class = TaskSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        task = super().get_object()
-        if task.assigned_to != self.request.user:
-            raise PermissionDenied("You do not have permission to update this task.")
-        if task.acceptance_status != 'Accepted':
-            raise PermissionDenied("You must accept the task before updating its status.")
-        return task
-
-    def perform_update(self, serializer):
-        task = serializer.save()
-
-        # Notify the volunteer themselves
-        Notification.objects.create(
-            recipient=task.assigned_to,
-            message=f"Task '{task.title}' status updated to {task.status}"
-        )
-
-        # Notify all admins
-        admins = User.objects.filter(is_staff=True, is_superuser=True)
-        for admin in admins:
-            Notification.objects.create(
-                recipient=admin,
-                message=f"Volunteer '{task.assigned_to.username}' updated task '{task.title}' to {task.status}"
-            )
+@login_required
+def my_tasks_view(request):
+    tasks = Task.objects.filter(assigned_to=request.user)
+    print(f"Tasks for {request.user.username}: {tasks}")  # Debug line to check fetched tasks
+    return render(request, 'tasks/my_tasks.html', {'tasks': tasks})
 
 # ---------------------------
 # Volunteer accepts a task
 # ---------------------------
-class TaskAcceptView(generics.UpdateAPIView):
-    queryset = Task.objects.all()
-    serializer_class = TaskAcceptanceSerializer
-    permission_classes = [IsAuthenticated]
+@login_required
+def accept_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id, assigned_to=request.user)
+    task.acceptance_status = 'Accepted'
+    task.status = 'In Progress'
+    task.save()
 
-    def update(self, request, *args, **kwargs):
-        task = self.get_object()
-        if task.assigned_to != request.user:
-            raise PermissionDenied("You can only accept tasks assigned to you.")
-        task.acceptance_status = 'Accepted'
-        task.status = 'In Progress'
-        task.save()
+    # Notify all admins
+    notify_admins(f"{request.user.username} accepted task '{task.title}'.")
 
-        # Notify all admins
-        admins = User.objects.filter(is_staff=True, is_superuser=True)
-        for admin in admins:
-            Notification.objects.create(
-                recipient=admin,
-                message=f"{request.user.username} accepted task '{task.title}'."
-            )
-
-        return Response({"message": "Task accepted successfully."})
+    messages.success(request, "✅ You have accepted the task.")
+    return redirect('my_tasks')
 
 # ---------------------------
 # Volunteer rejects a task
 # ---------------------------
-class TaskRejectView(generics.UpdateAPIView):
-    queryset = Task.objects.all()
-    serializer_class = TaskAcceptanceSerializer
-    permission_classes = [IsAuthenticated]
+@login_required
+def reject_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id, assigned_to=request.user)
+    task.acceptance_status = 'Rejected'
+    task.save()
 
-    def update(self, request, *args, **kwargs):
-        task = self.get_object()
-        if task.assigned_to != request.user:
-            raise PermissionDenied("You can only reject tasks assigned to you.")
-        task.acceptance_status = 'Rejected'
-        task.save()
+    # Notify all admins
+    notify_admins(f"{request.user.username} rejected task '{task.title}'.")
 
-        # Notify all admins
-        admins = User.objects.filter(is_staff=True, is_superuser=True)
-        for admin in admins:
-            Notification.objects.create(
-                recipient=admin,
-                message=f"{request.user.username} rejected task '{task.title}'."
-            )
+    messages.info(request, "❌ You have rejected the task.")
+    return redirect('my_tasks')
 
-        return Response({"message": "Task rejected successfully."})
-
+# Helper function to notify admins
+def notify_admins(message):
+    admins = User.objects.filter(is_staff=True, is_superuser=True)
+    for admin in admins:
+        Notification.objects.create(recipient=admin, message=message)

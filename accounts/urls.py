@@ -22,12 +22,13 @@ urlpatterns = [
 
     # Single dashboard route (protected)
     path("dashboard/", login_required(views.dashboard_redirect), name="dashboard"),
+    
 
     # Role-specific dashboards (protected)
     path('dashboard/admin/', login_required(views.admin_dashboard), name='admin_dashboard'),
     path('dashboard/coordinator/', login_required(views.coordinator_dashboard), name='coordinator_dashboard'),
     path('dashboard/volunteer/', login_required(views.volunteer_dashboard), name='volunteer_dashboard'),
-
+    path("dashboard/redirect/", login_required(views.dashboard_redirect), name="dashboard_redirect"),
     # Modules (protected)
     path('modules/tasks/', login_required(views.tasks_module), name='tasks_module'),
     path('modules/recognition/', login_required(views.recognition_module), name='recognition_module'),

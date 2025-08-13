@@ -80,14 +80,7 @@ def login_form(request):
         if user:
             login(request, user)
             messages.success(request, f"👋 Welcome back, {user.username}!")
-            if user.role == "Admin":
-                return redirect("admin_dashboard")
-            elif user.role == "Coordinator":
-                return redirect("coordinator_dashboard")
-            elif user.role == "Volunteer":
-                return redirect("volunteer_dashboard")
-            else:
-                return redirect("profile_page")
+            return redirect("dashboard_redirect")
         else:
             messages.error(request, "❌ Invalid username or password.")
     return render(request, "accounts/login.html")
@@ -161,7 +154,9 @@ def create_task(request):
     if request.method == "POST":
         form = TaskForm(request.POST)
         if form.is_valid():
-            form.save()
+            task = form.save(commit=False)
+            task.assigned_to = User.objects.get(id=request.POST.get("assigned_to"))  # Ensure to set the assigned user
+            task.save()
             messages.success(request, "✅ Task created successfully!")
             return redirect("tasks_module")
     else:
@@ -239,17 +234,24 @@ def reports_module(request):
 # ---------- Manage Users ----------
 @login_required
 def manage_users(request):
-    if request.user.role != "Admin":
+    if request.user.role not in ["Admin", "Coordinator"]:
         messages.error(request, "You are not authorized to access this page.")
         return redirect("dashboard_redirect")
-    users = User.objects.all().order_by("-date_joined")
+    
+    # If Coordinator, filter users to only show Volunteers
+    if request.user.role == "Coordinator":
+        users = User.objects.filter(role="Volunteer").order_by("-date_joined")
+    else:
+        users = User.objects.all().order_by("-date_joined")
+
     return render(request, "modules/manage_users.html", {"users": users})
 
 @login_required
 def toggle_user_status(request, user_id):
-    if request.user.role != "Admin":
+    if request.user.role not in ["Admin", "Coordinator"]:
         messages.error(request, "You are not authorized to perform this action.")
         return redirect("dashboard_redirect")
+    
     user = get_object_or_404(User, id=user_id)
     user.is_active = not user.is_active
     user.save()
@@ -259,11 +261,12 @@ def toggle_user_status(request, user_id):
 
 @login_required
 def delete_user(request, user_id):
-    if request.user.role != "Admin":
+    if request.user.role not in ["Admin", "Coordinator"]:
         messages.error(request, "You are not authorized to perform this action.")
         return redirect("dashboard_redirect")
+    
     user = get_object_or_404(User, id=user_id)
-    if user != request.user:
+    if user != request.user:  # Prevent self-deletion
         user.delete()
         messages.success(request, f"User {user.username} has been deleted.")
     else:
