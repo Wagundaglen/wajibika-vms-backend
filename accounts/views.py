@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
 from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import PermissionDenied
 from tasks.models import Task
 from tasks.forms import TaskForm
 from .forms import VolunteerRegistrationForm, EditProfileForm
@@ -24,11 +25,10 @@ def donate(request):
     return render(request, "donate.html")
 
 def payment_options(request):
-    context = {
+    return render(request, "payment_options.html", {
         'paypal_link': 'https://www.paypal.com/donate?hosted_button_id=YOUR_PAYPAL_ID',
         'mpesa_link': 'https://m-pesapay.com/YOUR_MPESA_LINK',
-    }
-    return render(request, "payment_options.html", context)
+    })
 
 @csrf_exempt
 def donate_process(request):
@@ -43,7 +43,6 @@ def donate_process(request):
 
 def contact(request):
     return render(request, "contact.html")
-
 
 # ---------- Account Views ----------
 def register_form(request):
@@ -91,6 +90,7 @@ def profile_page(request):
 
 @login_required
 def edit_profile(request):
+    """Edit own profile"""
     if request.method == "POST":
         form = EditProfileForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
@@ -104,11 +104,39 @@ def edit_profile(request):
     return render(request, "accounts/edit_profile.html", {"form": form})
 
 @login_required
+def edit_user(request, user_id):
+    """Admins/Coordinators edit another user's profile"""
+    if request.user.role not in ["Admin", "Coordinator"]:
+        raise PermissionDenied("You are not authorized to edit users.")
+
+    user_obj = get_object_or_404(User, id=user_id)
+
+    # Coordinators can only edit Volunteers
+    if request.user.role == "Coordinator" and user_obj.role != "Volunteer":
+        raise PermissionDenied("Coordinators can only edit volunteers.")
+
+    if request.method == "POST":
+        form = EditProfileForm(request.POST, request.FILES, instance=user_obj)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"✅ {user_obj.username}'s profile updated successfully.")
+            return redirect("manage_users")
+        else:
+            messages.error(request, "⚠️ Please correct the errors below.")
+    else:
+        form = EditProfileForm(instance=user_obj)
+
+    return render(request, "accounts/edit_profile.html", {
+        "form": form,
+        "user_obj": user_obj,
+        "is_editing_other_user": True
+    })
+
+@login_required
 def logout_user(request):
     logout(request)
     messages.info(request, "✅ You have been logged out.")
     return redirect("login_form")
-
 
 # ---------- Dashboard Views ----------
 @login_required
@@ -134,7 +162,6 @@ def dashboard_redirect(request):
     else:
         return redirect("profile_page")
 
-
 # ---------- Tasks Module ----------
 @login_required
 def tasks_module(request):
@@ -155,7 +182,7 @@ def create_task(request):
         form = TaskForm(request.POST)
         if form.is_valid():
             task = form.save(commit=False)
-            task.assigned_to = User.objects.get(id=request.POST.get("assigned_to"))  # Ensure to set the assigned user
+            task.assigned_to = User.objects.get(id=request.POST.get("assigned_to"))
             task.save()
             messages.success(request, "✅ Task created successfully!")
             return redirect("tasks_module")
@@ -189,7 +216,6 @@ def delete_task(request, task_id):
     messages.success(request, "✅ Task deleted successfully!")
     return redirect("tasks_module")
 
-# Volunteer task responses
 @login_required
 def accept_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, assigned_to=request.user)
@@ -207,7 +233,6 @@ def reject_task(request, task_id):
     task.save()
     messages.info(request, "❌ You have rejected the task.")
     return redirect("tasks_module")
-
 
 # ---------- Other Modules ----------
 @login_required
@@ -230,7 +255,6 @@ def training_module(request):
 def reports_module(request):
     return render(request, "modules/reports.html")
 
-
 # ---------- Manage Users ----------
 @login_required
 def manage_users(request):
@@ -238,7 +262,6 @@ def manage_users(request):
         messages.error(request, "You are not authorized to access this page.")
         return redirect("dashboard_redirect")
     
-    # If Coordinator, filter users to only show Volunteers
     if request.user.role == "Coordinator":
         users = User.objects.filter(role="Volunteer").order_by("-date_joined")
     else:
@@ -266,13 +289,12 @@ def delete_user(request, user_id):
         return redirect("dashboard_redirect")
     
     user = get_object_or_404(User, id=user_id)
-    if user != request.user:  # Prevent self-deletion
+    if user != request.user:
         user.delete()
         messages.success(request, f"User {user.username} has been deleted.")
     else:
         messages.error(request, "You cannot delete your own account.")
     return redirect("manage_users")
-
 
 # ---------- Settings ----------
 @login_required

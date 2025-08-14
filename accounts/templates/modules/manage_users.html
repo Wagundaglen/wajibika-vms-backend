@@ -52,8 +52,8 @@
                     </td>
                     <td>{{ user.date_joined|date:"Y-m-d" }}</td>
                     <td>
-                        <!-- Edit Profile -->
-                        <a href="{% url 'edit_profile' %}?user_id={{ user.id }}" 
+                        <!-- Edit User -->
+                        <a href="{% url 'edit_user' user.id %}" 
                            class="btn btn-sm btn-primary">
                             <i class="bi bi-pencil-square"></i> Edit
                         </a>

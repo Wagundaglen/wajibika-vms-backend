@@ -1,21 +1,19 @@
 from django.urls import path
-from .views import (
-    create_task_view,  # Updated to match traditional view
-    my_tasks_view,     # Updated to match traditional view
-    accept_task,       # Updated to match traditional view
-    reject_task,       # Updated to match traditional view
-)
+from . import views
 
 urlpatterns = [
-    # Admin creates a task
-    path('create/', create_task_view, name='task-create'),
+    # Unified task list for all roles (Admins, Coordinators, Volunteers)
+    path("", views.task_list, name="tasks_module"),
 
-    # Volunteer views their own tasks
-    path('my-tasks/', my_tasks_view, name='my-tasks'),
+    # Admin/Coordinator creates a task
+    path("create/", views.create_task, name="create_task"),
 
     # Volunteer accepts a task
-    path('<int:task_id>/accept/', accept_task, name='task-accept'),
+    path("<int:task_id>/accept/", views.accept_task, name="accept_task"),
 
     # Volunteer rejects a task
-    path('<int:task_id>/reject/', reject_task, name='task-reject'),
+    path("<int:task_id>/reject/", views.reject_task, name="reject_task"),
+
+    # Volunteer updates task status (In Progress / Completed)
+    path("<int:task_id>/update-status/", views.update_task_status, name="update_task_status"),
 ]

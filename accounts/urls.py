@@ -22,13 +22,13 @@ urlpatterns = [
 
     # Single dashboard route (protected)
     path("dashboard/", login_required(views.dashboard_redirect), name="dashboard"),
-    
 
     # Role-specific dashboards (protected)
     path('dashboard/admin/', login_required(views.admin_dashboard), name='admin_dashboard'),
     path('dashboard/coordinator/', login_required(views.coordinator_dashboard), name='coordinator_dashboard'),
     path('dashboard/volunteer/', login_required(views.volunteer_dashboard), name='volunteer_dashboard'),
     path("dashboard/redirect/", login_required(views.dashboard_redirect), name="dashboard_redirect"),
+
     # Modules (protected)
     path('modules/tasks/', login_required(views.tasks_module), name='tasks_module'),
     path('modules/recognition/', login_required(views.recognition_module), name='recognition_module'),
@@ -36,9 +36,15 @@ urlpatterns = [
     path('modules/communication/', login_required(views.communication_module), name='communication_module'),
     path('modules/training/', login_required(views.training_module), name='training_module'),
     path('modules/reports/', login_required(views.reports_module), name='reports_module'),
+
+    # Manage users
     path('modules/manage-users/', login_required(views.manage_users), name='manage_users'),
     path('modules/manage-users/<int:user_id>/toggle-status/', login_required(views.toggle_user_status), name='toggle_user_status'),
     path('modules/manage-users/<int:user_id>/delete/', login_required(views.delete_user), name='delete_user'),
+    path('modules/manage-users/<int:user_id>/edit/', login_required(views.edit_user), name='edit_user'),  # ✅ NEW EDIT USER ROUTE
+    
+
+
     path('modules/settings/', login_required(views.settings_module), name='settings_module'),
 
     # Task URLs
