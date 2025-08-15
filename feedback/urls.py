@@ -1,7 +1,14 @@
-from rest_framework.routers import DefaultRouter
-from .views import FeedbackViewSet
+from django.urls import path
+from .views import (
+    FeedbackCreateView,
+    MyFeedbackListView,
+    FeedbackDashboardView,
+    FeedbackUpdateView
+)
 
-router = DefaultRouter()
-router.register(r'', FeedbackViewSet)  # Empty string for cleaner URL
-
-urlpatterns = router.urls
+urlpatterns = [
+    path('create/', FeedbackCreateView.as_view(), name='feedback_create'),
+    path('my/', MyFeedbackListView.as_view(), name='my_feedback'),
+    path('dashboard/', FeedbackDashboardView.as_view(), name='feedback_dashboard'),
+    path('update/<int:pk>/', FeedbackUpdateView.as_view(), name='feedback_update'),
+]
