@@ -16,6 +16,7 @@ urlpatterns = [
     # Other feature modules (using templates, not APIs)
     path('tasks/', include('tasks.urls')),
     path('notifications/', include('communication.urls')),
+    path('communication/', include('communication.urls')),
     path('training/', include('training.urls')),
     path('feedback/', include('feedback.urls')),
     path('recognition/', include('recognition.urls')),

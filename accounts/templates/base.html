@@ -40,6 +40,9 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        .badge {
+            font-size: 0.7rem;
+        }
     </style>
 </head>
 <body>
@@ -67,11 +70,42 @@
                 <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}" href="{% url 'contact' %}">Contact</a></li>
 
                 {% if user.is_authenticated %}
-                <!-- Dashboard button only for logged in users -->
+                <!-- Dashboard -->
                 <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                    <a class="nav-link {% if request.resolver_match.url_name in 'admin_dashboard coordinator_dashboard volunteer_dashboard' %}active{% endif %}" href="{% url 'dashboard_redirect' %}">
                         Dashboard
                     </a>
+                </li>
+
+                <!-- Communication Dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="commDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Communication
+                        {% if unread_inbox > 0 or unread_notifications > 0 %}
+                            <span class="badge bg-warning text-dark">{{ unread_inbox|add:unread_notifications }}</span>
+                        {% endif %}
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="commDropdown">
+                        <li>
+                            <a class="dropdown-item d-flex justify-content-between" href="{% url 'inbox' %}">
+                                Inbox
+                                {% if unread_inbox > 0 %}
+                                    <span class="badge bg-primary">{{ unread_inbox }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'sent_messages' %}">Sent Messages</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex justify-content-between" href="{% url 'notifications_list' %}">
+                                Notifications
+                                {% if unread_notifications > 0 %}
+                                    <span class="badge bg-danger">{{ unread_notifications }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 {% endif %}
             </ul>

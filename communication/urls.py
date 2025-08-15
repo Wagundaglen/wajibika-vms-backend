@@ -1,18 +1,15 @@
 from django.urls import path
-from .views import (
-    NotificationListView,
-    NotificationUpdateView,
-    MarkAllNotificationsAsReadView
-)
+from . import views
 
 urlpatterns = [
-    # List all notifications for the logged-in user
-    path('', NotificationListView.as_view(), name='notifications-list'),
+    # Notifications
+    path('notifications/', views.notifications_list, name='notifications_list'),
+    path('notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+    path('notifications/mark-all/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
 
-    # Mark a single notification as read
-    path('<int:pk>/mark-as-read/', NotificationUpdateView.as_view(), name='notification-mark-as-read'),
-
-    # Mark all notifications as read
-    path('mark-all-as-read/', MarkAllNotificationsAsReadView.as_view(), name='notifications-mark-all-as-read'),
+    # Messaging
+    path('messages/inbox/', views.inbox, name='inbox'),
+    path('messages/sent/', views.sent_messages, name='sent_messages'),
+    path('messages/<int:message_id>/', views.read_message, name='read_message'),  # <-- THIS LINE
+    path('messages/send/', views.send_message, name='send_message'),
 ]
-

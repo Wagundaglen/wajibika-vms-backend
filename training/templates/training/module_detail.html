@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ module.title }}</h2>
+<p><strong>Type:</strong> {{ module.get_content_type_display }}</p>
+<p><strong>Description:</strong> {{ module.description }}</p>
+
+{% if module.content_type == "text" %}
+    <div style="border:1px solid #ccc; padding:10px; margin-top:10px;">
+        {{ module.content|linebreaks }}
+    </div>
+{% else %}
+    <p>
+        <a href="{{ module.content }}" target="_blank">Open Content</a>
+    </p>
+{% endif %}
+
+{% if progress and progress.status != "completed" %}
+    <a href="{% url 'training:mark_completed' module.id %}" class="btn btn-primary">Mark Completed</a>
+{% endif %}
+{% endblock %}
