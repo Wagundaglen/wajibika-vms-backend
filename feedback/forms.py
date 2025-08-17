@@ -124,9 +124,11 @@ class SurveyResponseForm(forms.ModelForm):
 # ======================================================
 class QuestionForm(forms.ModelForm):
     """Admin/Coordinator creates a new question for a survey."""
+    required = forms.BooleanField(required=False)  # Ensure this line exists
+
     class Meta:
         model = Question
-        fields = ['text', 'question_type']
+        fields = ['text', 'question_type', 'required']  # Include 'required'
         widgets = {
             'text': forms.TextInput(attrs={
                 'class': 'form-control',

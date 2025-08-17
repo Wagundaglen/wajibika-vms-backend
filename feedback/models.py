@@ -184,6 +184,7 @@ class Question(models.Model):
         ('multiple_choice', 'Multiple Choice'),
         # Add more question types if needed
     ])
+    required = models.BooleanField(default=False)  # Add this line
 
     def __str__(self):
         return self.text

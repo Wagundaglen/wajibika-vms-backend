@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+      <div class="card shadow-lg border-0 rounded-3">
+        <div class="card-header bg-primary text-white text-center">
+          <h3 class="mb-0">
+            {% if form.instance.pk %} Update Question {% else %} Create a New Question {% endif %}
+          </h3>
+        </div>
+        <div class="card-body p-4">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="mb-3">
+              {{ form.text|as_crispy_field }}
+            </div>
+            <div class="mb-3">
+              {{ form.question_type|as_crispy_field }}
+            </div>
+
+            <!-- Required Checkbox -->
+            <div class="mb-3 form-check">
+              {{ form.required|as_crispy_field }}
+              <label class="form-check-label" for="id_required">Required</label>
+            </div>
+
+            <div class="mb-4">
+              <h5>Options (for Multiple Choice Questions)</h5>
+              <div id="options-formset">
+                {% for option_form in options_formset.forms %}
+                  <div class="border p-3 mb-2 rounded">
+                    {{ option_form.option_text|as_crispy_field }}
+                    <button type="button" class="btn btn-danger btn-sm remove-option" style="float: right;">Remove</button>
+                  </div>
+                {% endfor %}
+              </div>
+              <button type="button" class="btn btn-primary" id="add-option">Add Option</button>
+            </div>
+
+            <div class="text-end mt-3">
+              <button type="submit" class="btn btn-success px-4">
+                <i class="bi bi-check-circle"></i> Save Question
+              </button>
+              <a href="{% url 'survey_list' %}" class="btn btn-secondary">
+                Skip
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript for Dynamic Option Handling -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addOptionButton = document.getElementById('add-option');
+    const optionsFormset = document.getElementById('options-formset');
+
+    addOptionButton.addEventListener('click', function() {
+        const totalForms = document.querySelectorAll('#options-formset > div').length;
+        const newForm = `
+            <div class="border p-3 mb-2 rounded">
+                <input type="text" name="form-${totalForms}-option_text" class="form-control mb-2" placeholder="Enter option text" required>
+                <button type="button" class="btn btn-danger btn-sm remove-option" style="float: right;">Remove</button>
+            </div>
+        `;
+        optionsFormset.insertAdjacentHTML('beforeend', newForm);
+    });
+
+    optionsFormset.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-option')) {
+            e.target.closest('div').remove();
+        }
+    });
+});
+</script>
+
+{% endblock %}
