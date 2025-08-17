@@ -23,7 +23,6 @@ urlpatterns = [
     path("survey/<int:pk>/update/", views.SurveyUpdateView.as_view(), name="survey_update"),
     path("survey/<int:pk>/delete/", views.SurveyDeleteView.as_view(), name="survey_delete"),
 
-
     # ---------------------------------
     # Survey Participation (Volunteers)
     # ---------------------------------
@@ -31,9 +30,19 @@ urlpatterns = [
     path("survey/thanks/", views.SurveyThanksView.as_view(), name="survey_thanks"),
 
     # ---------------------------------
+    # Survey Sending (Admin/Coordinator)
+    # ---------------------------------
+    path("survey/send/", views.send_survey, name="send_survey"),  # New path for sending surveys
+
+    # ---------------------------------
     # Question Management (Admin/Coordinator)
     # ---------------------------------
     path("survey/<int:survey_pk>/question/create/", views.QuestionCreateView.as_view(), name="question_create"),
     path("survey/<int:survey_pk>/question/<int:pk>/update/", views.QuestionUpdateView.as_view(), name="question_update"),
     path("survey/<int:survey_pk>/question/<int:pk>/delete/", views.QuestionDeleteView.as_view(), name="question_delete"),
+
+    # ---------------------------------
+    # Survey Response Detail
+    # ---------------------------------
+    path("survey/response/<int:pk>/", views.SurveyResponseDetailView.as_view(), name="survey_response_detail"),  # Add this line
 ]

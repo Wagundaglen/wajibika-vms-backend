@@ -67,6 +67,35 @@
               </a>
             </div>
           </form>
+
+          <!-- Send Survey Form -->
+          <div class="mt-4">
+            <h5>Send Survey</h5>
+            <form method="POST" action="{% url 'send_survey' %}">
+              {% csrf_token %}
+              <input type="hidden" name="survey" value="{{ form.instance.pk }}">
+              <div class="mb-3">
+                <label class="form-label">Send To:</label>
+                <div>
+                  <input type="radio" id="sendToAll" name="recipient" value="all" checked>
+                  <label for="sendToAll">All Volunteers</label>
+                </div>
+                <div>
+                  <input type="radio" id="sendToSpecific" name="recipient" value="specific">
+                  <label for="sendToSpecific">Specific Volunteers</label>
+                </div>
+              </div>
+              <div id="specificVolunteers" class="mb-3" style="display: none;">
+                <label for="volunteerSelect" class="form-label">Select Volunteers</label>
+                <select id="volunteerSelect" name="volunteers" class="form-select" multiple>
+                  {% for volunteer in volunteers %}
+                    <option value="{{ volunteer.id }}">{{ volunteer.get_full_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary">Send Survey</button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
@@ -98,6 +127,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.classList.contains('remove-question')) {
             e.target.closest('div').remove();
         }
+    });
+
+    // Toggle visibility of specific volunteers selection
+    document.querySelectorAll('input[name="recipient"]').forEach((elem) => {
+        elem.addEventListener("change", function(event) {
+            const specificVolunteersDiv = document.getElementById("specificVolunteers");
+            specificVolunteersDiv.style.display = event.target.value === "specific" ? "block" : "none";
+        });
     });
 });
 </script>

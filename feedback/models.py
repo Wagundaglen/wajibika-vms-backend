@@ -5,6 +5,17 @@ from django.utils import timezone
 User = settings.AUTH_USER_MODEL
 
 # -------------------------------------------------
+# VOLUNTEER MODEL
+# -------------------------------------------------
+class Volunteer(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=100)
+    email = models.EmailField()
+
+    def __str__(self):
+        return self.full_name
+
+# -------------------------------------------------
 # FEEDBACK MODEL
 # -------------------------------------------------
 class Feedback(models.Model):
@@ -184,7 +195,7 @@ class Question(models.Model):
         ('multiple_choice', 'Multiple Choice'),
         # Add more question types if needed
     ])
-    required = models.BooleanField(default=False)  # Add this line
+    required = models.BooleanField(default=False)
 
     def __str__(self):
         return self.text

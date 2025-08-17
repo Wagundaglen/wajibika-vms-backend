@@ -6,9 +6,9 @@ from django.views.generic import (
     CreateView, UpdateView, TemplateView, ListView, DeleteView, DetailView
 )
 from django.urls import reverse_lazy
-from django.forms import inlineformset_factory
-from django.db import models  # Ensure this import is included
-from .models import Feedback, Survey, SurveyResponse, Question
+from django.core.mail import send_mail
+from django.db.models import Q
+from .models import Feedback, Survey, SurveyResponse, Question, Volunteer
 from .forms import (
     FeedbackForm,
     FeedbackResponseForm,
@@ -17,15 +17,44 @@ from .forms import (
     QuestionForm,
 )
 
-# =====================================================
-# Helper: role check for admin/coordinator
-# =====================================================
+# Helper: Role check for admin/coordinator
 def is_admin_or_coordinator(user):
     return getattr(user, "role", "").lower() in ["admin", "coordinator"] or user.is_staff
 
-# =====================================================
-# Submit Feedback (Volunteers)
-# =====================================================
+# Send Survey Functionality
+@login_required
+def send_survey(request):
+    if is_admin_or_coordinator(request.user):
+        if request.method == 'POST':
+            survey_id = request.POST.get('survey')
+            recipient_type = request.POST.get('recipient')
+            volunteers_ids = request.POST.getlist('volunteers') if recipient_type == 'specific' else None
+
+            survey = get_object_or_404(Survey, pk=survey_id)
+
+            if recipient_type == 'all':
+                volunteers = Volunteer.objects.all()
+            else:
+                volunteers = Volunteer.objects.filter(id__in=volunteers_ids)
+
+            for volunteer in volunteers:
+                send_mail(
+                    subject=f"New Survey: {survey.title}",
+                    message=f"You have been invited to participate in the survey: {survey.title}. Please check your dashboard.",
+                    from_email='your_email@example.com',  # Change to your email
+                    recipient_list=[volunteer.email],
+                )
+
+            messages.success(request, "✅ Survey sent successfully.")
+            return redirect('survey_list')
+
+        messages.error(request, "⚠️ Invalid request.")
+        return redirect('survey_list')
+    else:
+        messages.error(request, "⚠️ You are not authorized to send surveys.")
+        return redirect("feedback_dashboard")
+
+# Feedback Management Views
 class FeedbackCreateView(LoginRequiredMixin, CreateView):
     model = Feedback
     form_class = FeedbackForm
@@ -43,9 +72,6 @@ class FeedbackCreateView(LoginRequiredMixin, CreateView):
         messages.success(self.request, "✅ Your feedback has been submitted successfully.")
         return super().form_valid(form)
 
-# =====================================================
-# Feedback Detail (Volunteers + Admin/Coordinator)
-# =====================================================
 class FeedbackDetailView(LoginRequiredMixin, DetailView):
     model = Feedback
     template_name = "feedback/feedback_detail.html"
@@ -55,22 +81,14 @@ class FeedbackDetailView(LoginRequiredMixin, DetailView):
         feedback = self.get_object()
         if feedback.from_user == request.user or feedback.to_user == request.user or is_admin_or_coordinator(request.user):
             return super().dispatch(request, *args, **kwargs)
-        messages.error(request, "⚠️ You are not authorised to view this feedback.")
+        messages.error(request, "⚠️ You are not authorized to view this feedback.")
         return redirect("feedback_dashboard")
 
-# =====================================================
-# Update Feedback
-# =====================================================
 class FeedbackUpdateView(LoginRequiredMixin, UpdateView):
     model = Feedback
     form_class = FeedbackForm
     template_name = "feedback/feedback_update.html"
     success_url = reverse_lazy("feedback_dashboard")
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["user"] = self.request.user
-        return kwargs
 
     def dispatch(self, request, *args, **kwargs):
         feedback = self.get_object()
@@ -78,7 +96,7 @@ class FeedbackUpdateView(LoginRequiredMixin, UpdateView):
             messages.error(request, "⚠️ You can no longer edit this feedback as it has been reviewed/resolved.")
             return redirect("feedback_dashboard")
         elif not is_admin_or_coordinator(request.user):
-            messages.error(request, "⚠️ You are not authorised to edit this feedback.")
+            messages.error(request, "⚠️ You are not authorized to edit this feedback.")
             return redirect("feedback_dashboard")
         return super().dispatch(request, *args, **kwargs)
 
@@ -88,9 +106,6 @@ class FeedbackUpdateView(LoginRequiredMixin, UpdateView):
         messages.success(self.request, "✏️ Feedback updated successfully.")
         return super().form_valid(form)
 
-# =====================================================
-# Respond to Feedback (Admin/Coordinator only)
-# =====================================================
 class FeedbackResponseView(LoginRequiredMixin, UpdateView):
     model = Feedback
     form_class = FeedbackResponseForm
@@ -110,9 +125,6 @@ class FeedbackResponseView(LoginRequiredMixin, UpdateView):
         messages.success(self.request, "💬 Response saved successfully.")
         return super().form_valid(form)
 
-# =====================================================
-# Mark Feedback as Resolved
-# =====================================================
 @login_required
 def mark_feedback_resolved(request, pk):
     feedback = get_object_or_404(Feedback, pk=pk)
@@ -120,12 +132,9 @@ def mark_feedback_resolved(request, pk):
         feedback.mark_resolved(user=request.user)
         messages.success(request, "✅ Feedback marked as resolved.")
     else:
-        messages.error(request, "⚠️ You are not authorised to resolve this feedback.")
+        messages.error(request, "⚠️ You are not authorized to resolve this feedback.")
     return redirect("feedback_dashboard")
 
-# =====================================================
-# Feedback Dashboard
-# =====================================================
 class FeedbackDashboardView(LoginRequiredMixin, TemplateView):
     template_name = "feedback/dashboard.html"
 
@@ -137,7 +146,7 @@ class FeedbackDashboardView(LoginRequiredMixin, TemplateView):
             context["survey_responses"] = SurveyResponse.objects.select_related("survey", "user").order_by("-created_at")
         else:
             context["feedbacks"] = Feedback.objects.filter(
-                models.Q(from_user=self.request.user) | models.Q(to_user=self.request.user)
+                Q(from_user=self.request.user) | Q(to_user=self.request.user)
             ).order_by("-created_at")
             context["surveys"] = Survey.objects.filter(assigned_users=self.request.user).order_by("-created_at")
             context["survey_responses"] = SurveyResponse.objects.filter(
@@ -145,9 +154,6 @@ class FeedbackDashboardView(LoginRequiredMixin, TemplateView):
             ).select_related("survey").order_by("-created_at")
         return context
 
-# =====================================================
-# My Feedback
-# =====================================================
 class MyFeedbackListView(LoginRequiredMixin, ListView):
     model = Feedback
     template_name = "feedback/my_feedback.html"
@@ -156,9 +162,6 @@ class MyFeedbackListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         return Feedback.objects.filter(from_user=self.request.user).order_by("-created_at")
 
-# =====================================================
-# Delete Feedback
-# =====================================================
 @login_required
 def delete_feedback(request, pk):
     feedback = get_object_or_404(Feedback, pk=pk)
@@ -170,32 +173,26 @@ def delete_feedback(request, pk):
         feedback.delete()
         messages.success(request, "🗑️ Feedback deleted successfully.")
     else:
-        messages.error(request, "⚠️ You are not authorised to delete this feedback.")
+        messages.error(request, "⚠️ You are not authorized to delete this feedback.")
     return redirect("feedback_dashboard")
 
-# =====================================================
-# Survey Management
-# =====================================================
+# Survey Management Views
 class SurveyCreateView(LoginRequiredMixin, CreateView):
     model = Survey
     form_class = AdminSurveyForm
-    template_name = "feedback/survey_form.html"  # This renders the form
+    template_name = "feedback/survey_form.html"
     success_url = reverse_lazy("survey_list")
 
     def dispatch(self, request, *args, **kwargs):
         if not is_admin_or_coordinator(request.user):
             messages.error(request, "⚠️ Only admins/coordinators can create surveys.")
             return redirect("feedback_dashboard")
-        
-        # Allow access to the survey creation form
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
         messages.success(self.request, "📝 Survey created successfully.")
         return super().form_valid(form)
-# Create a formset for questions
-QuestionFormSet = inlineformset_factory(Survey, Question, fields=('text', 'question_type'), extra=1)
 
 class SurveyListView(LoginRequiredMixin, ListView):
     model = Survey
@@ -208,14 +205,38 @@ class SurveyListView(LoginRequiredMixin, ListView):
         return Survey.objects.filter(assigned_users=self.request.user).order_by("-created_at")
 
 class SurveyDetailView(LoginRequiredMixin, TemplateView):
-    template_name = "feedback/survey_detail.html"
+    template_name = "feedback/survey_response_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.survey = get_object_or_404(Survey, pk=kwargs["pk"])
+        # Check if the user is assigned to the survey or is an admin/coordinator
+        if not self.survey.assigned_users.filter(pk=request.user.pk).exists() and not is_admin_or_coordinator(request.user):
+            messages.error(request, "⚠️ You are not authorized to view this survey.")
+            return redirect("feedback_dashboard")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        survey = get_object_or_404(Survey, pk=self.kwargs["pk"])
-        context["survey"] = survey
-        context["responses"] = SurveyResponse.objects.filter(survey=survey).select_related("user")
+        context['is_admin_or_coordinator'] = is_admin_or_coordinator(self.request.user)
+        
+        # Create or get the survey response for the user
+        response, _ = SurveyResponse.objects.get_or_create(
+            survey=self.survey,
+            user=self.request.user,
+            defaults={"status": "pending"},
+        )
+        
+        context["form"] = SurveyResponseForm(instance=response)
+        context["survey"] = self.survey  # Use the stored survey instance
         return context
+
+class SurveyResponseDetailView(LoginRequiredMixin, DetailView):
+    model = SurveyResponse
+    template_name = "feedback/survey_response_detail.html"
+    context_object_name = "response"
+
+    def get_queryset(self):
+        return SurveyResponse.objects.filter(user=self.request.user)
 
 class SurveyUpdateView(LoginRequiredMixin, UpdateView):
     model = Survey
@@ -248,19 +269,14 @@ class SurveyDeleteView(LoginRequiredMixin, DeleteView):
         messages.success(request, "🗑️ Survey deleted successfully.")
         return super().delete(request, *args, **kwargs)
 
-# =====================================================
-# Survey Thank You Page
-# =====================================================
 class SurveyThanksView(LoginRequiredMixin, TemplateView):
     template_name = "feedback/survey_thanks.html"
 
-# =====================================================
-# Submit Survey Response (Fixed q1, q2, rating)
-# =====================================================
 @login_required
 def submit_survey(request, pk):
     survey = get_object_or_404(Survey, pk=pk)
 
+    # Check if the user is assigned to this survey
     if not survey.assigned_users.filter(pk=request.user.pk).exists():
         messages.error(request, "⚠️ You are not assigned to this survey.")
         return redirect("feedback_dashboard")
@@ -268,7 +284,7 @@ def submit_survey(request, pk):
     response, _ = SurveyResponse.objects.get_or_create(
         survey=survey,
         user=request.user,
-        defaults={"assigned_by": survey.created_by, "status": "pending"},
+        defaults={"status": "pending"},
     )
 
     if request.method == "POST":
@@ -282,30 +298,18 @@ def submit_survey(request, pk):
     else:
         form = SurveyResponseForm(instance=response)
 
-    return render(
-        request,
-        "feedback/survey_response_form.html",
-        {"form": form, "survey": survey}
-    )
+    return render(request, "feedback/survey_response_form.html", {"form": form, "survey": survey})
 
-# =====================================================
-# My Feedback View (Added)
-# =====================================================
-class MyFeedbackListView(LoginRequiredMixin, ListView):
-    model = Feedback
-    template_name = "feedback/my_feedback.html"
-    context_object_name = "feedbacks"
-
-    def get_queryset(self):
-        return Feedback.objects.filter(from_user=self.request.user).order_by("-created_at")
-
-# =====================================================
-# Question Management Views
-# =====================================================
 class QuestionCreateView(LoginRequiredMixin, CreateView):
     model = Question
     form_class = QuestionForm
     template_name = "feedback/question_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not is_admin_or_coordinator(request.user):
+            messages.error(request, "⚠️ Only admins/coordinators can manage questions.")
+            return redirect("feedback_dashboard")
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         form.instance.survey = get_object_or_404(Survey, pk=self.kwargs['survey_pk'])
@@ -320,16 +324,24 @@ class QuestionUpdateView(LoginRequiredMixin, UpdateView):
     form_class = QuestionForm
     template_name = "feedback/question_form.html"
 
+    def dispatch(self, request, *args, **kwargs):
+        if not is_admin_or_coordinator(request.user):
+            messages.error(request, "⚠️ Only admins/coordinators can manage questions.")
+            return redirect("feedback_dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_success_url(self):
         return reverse_lazy('survey_detail', kwargs={'pk': self.object.survey.pk})
 
 class QuestionDeleteView(LoginRequiredMixin, DeleteView):
     model = Question
 
+    def dispatch(self, request, *args, **kwargs):
+        if not is_admin_or_coordinator(request.user):
+            messages.error(request, "⚠️ Only admins/coordinators can manage questions.")
+            return redirect("feedback_dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
     def get_success_url(self):
         messages.success(self.request, "🗑️ Question deleted successfully.")
         return reverse_lazy('survey_detail', kwargs={'pk': self.object.survey.pk})
-
-    def dispatch(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        return super().dispatch(request, *args, **kwargs)
