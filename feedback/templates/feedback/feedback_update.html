@@ -1,17 +1,74 @@
 {% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Update Feedback{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="card p-4 shadow-sm">
-        <h4>Update Feedback</h4>
-        <p><strong>From:</strong> {{ object.from_user|default:"Anonymous" }}</p>
-        <p><strong>Message:</strong> {{ object.message }}</p>
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-success">Save</button>
-            <a href="{% url 'feedback_dashboard' %}" class="btn btn-secondary">Cancel</a>
-        </form>
+<div class="container my-5">
+    <h2 class="text-primary mb-4">📩 Update / Respond to Feedback</h2>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                {{ form|crispy }}
+
+                <!-- Live Sentiment Preview -->
+                <div class="mt-3">
+                    <label class="form-label fw-bold">Live Sentiment Preview for Response:</label>
+                    <div id="sentimentPreview" class="alert alert-secondary py-2">
+                        Start typing your response to see sentiment...
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save-fill"></i> Save Changes
+                    </button>
+                    <a href="{% url 'feedback_dashboard' %}" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<!-- Sentiment Detection Script -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Detects if the response textarea exists
+    const responseInput = document.querySelector("#id_response");
+    const preview = document.getElementById("sentimentPreview");
+
+    if (responseInput) {
+        const positiveWords = ["good", "great", "excellent", "happy", "love", "helpful", "awesome", "wonderful"];
+        const negativeWords = ["bad", "poor", "angry", "sad", "hate", "terrible", "awful", "frustrated"];
+
+        responseInput.addEventListener("input", function () {
+            const text = responseInput.value.toLowerCase();
+            if (!text.trim()) {
+                preview.className = "alert alert-secondary py-2";
+                preview.textContent = "Start typing your response to see sentiment...";
+                return;
+            }
+
+            let score = 0;
+            positiveWords.forEach(word => { if (text.includes(word)) score++; });
+            negativeWords.forEach(word => { if (text.includes(word)) score--; });
+
+            if (score > 0) {
+                preview.className = "alert alert-success py-2";
+                preview.textContent = "😊 Positive tone detected";
+            } else if (score < 0) {
+                preview.className = "alert alert-danger py-2";
+                preview.textContent = "☹️ Negative tone detected";
+            } else {
+                preview.className = "alert alert-warning py-2";
+                preview.textContent = "😐 Neutral tone detected";
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

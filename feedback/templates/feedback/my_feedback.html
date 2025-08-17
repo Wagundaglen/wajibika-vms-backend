@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}My Feedback{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4 text-primary">📜 My Submitted Feedback</h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} mb-3">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if feedbacks %}
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>To</th>
+                    <th>Category</th>
+                    <th>Message</th>
+                    <th>Sentiment</th>
+                    <th>Status</th>
+                    <th>Response</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fb in feedbacks %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ fb.to_user.username }}</td>
+                        <td>{{ fb.get_category_display }}</td>
+                        <td>{{ fb.message|truncatewords:12 }}</td>
+                        <td>
+                            {% if fb.sentiment == "positive" %}
+                                <span class="badge bg-success">😊 Positive</span>
+                            {% elif fb.sentiment == "negative" %}
+                                <span class="badge bg-danger">☹️ Negative</span>
+                            {% else %}
+                                <span class="badge bg-secondary">😐 Neutral</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if fb.status == "resolved" %}
+                                <span class="badge bg-success">Resolved</span>
+                            {% elif fb.status == "pending" %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Open</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if fb.response %}
+                                {{ fb.response|truncatewords:12 }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if fb.from_user == user and not fb.anonymous %}
+                                <a href="{% url 'feedback_update' fb.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                <a href="{% url 'feedback_delete' fb.pk %}" class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Are you sure you want to delete this feedback?');">Delete</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-info">
+            You have not submitted any feedback yet.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

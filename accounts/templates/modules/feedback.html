@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load crispy_forms_tags %}
 
 {% block title %}Submit Feedback{% endblock %}
@@ -12,9 +12,25 @@
             </h4>
         </div>
         <div class="card-body">
-            <form method="POST" class="needs-validation" novalidate>
+            <form method="POST" novalidate>
                 {% csrf_token %}
-                {{ form|crispy }}
+                
+                <div class="mb-3">
+                    <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+                    {{ form.category }}
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.message.id_for_label }}" class="form-label">Message</label>
+                    {{ form.message }}
+                </div>
+
+                <div class="form-check mb-3">
+                    {{ form.anonymous }}
+                    <label class="form-check-label" for="{{ form.anonymous.id_for_label }}">
+                        Send Anonymously
+                    </label>
+                </div>
 
                 <div class="mt-4">
                     <button type="submit" class="btn btn-success px-4">

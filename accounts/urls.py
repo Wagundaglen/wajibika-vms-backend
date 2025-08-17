@@ -32,10 +32,11 @@ urlpatterns = [
     # Modules (protected)
     path('modules/tasks/', login_required(views.tasks_module), name='tasks_module'),
     path('modules/recognition/', login_required(views.recognition_module), name='recognition_module'),
-    path('modules/feedback/', login_required(views.feedback_module), name='feedback_module'),
     path('modules/communication/', login_required(views.communication_module), name='communication_module'),
     path('modules/training/', login_required(views.training_module), name='training_module'),
-    path('modules/reports/', login_required(views.reports_module), name='reports_module'),
+
+    # Feedback Module
+    path('modules/feedback/', login_required(views.feedback_module), name='feedback_module'),
 
     # Manage users
     path('modules/manage-users/', login_required(views.manage_users), name='manage_users'),

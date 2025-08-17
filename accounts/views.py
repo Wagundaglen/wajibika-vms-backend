@@ -240,10 +240,6 @@ def recognition_module(request):
     return render(request, "modules/recognition.html")
 
 @login_required
-def feedback_module(request):
-    return render(request, "modules/feedback.html")
-
-@login_required
 def communication_module(request):
     return render(request, "modules/communication.html")
 
@@ -251,9 +247,6 @@ def communication_module(request):
 def training_module(request):
     return render(request, "modules/training.html")
 
-@login_required
-def reports_module(request):
-    return render(request, "modules/reports.html")
 
 # ---------- Manage Users ----------
 @login_required
@@ -300,3 +293,12 @@ def delete_user(request, user_id):
 @login_required
 def settings_module(request):
     return render(request, "modules/settings.html")
+
+# ---------- Feedback Module ----------
+@login_required
+def feedback_module(request):
+    """
+    Entry point so /accounts/modules/feedback/ maps to the feedback app.
+    """
+    from feedback.views import submit_feedback  # local import avoids circular import
+    return submit_feedback(request)

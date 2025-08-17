@@ -77,6 +77,14 @@
                     </a>
                 </li>
 
+                <!-- Feedback -->
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'feedback_dashboard' %}active{% endif %}" 
+                    href="{% url 'feedback_dashboard' %}">
+                        Feedback
+                    </a>
+                </li>
+
                 <!-- Communication Dropdown -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="commDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">

@@ -1,107 +1,130 @@
 {% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Feedback Dashboard{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h4>Feedback Dashboard</h4>
+<div class="container my-5">
 
-    <!-- Filters -->
-    <form method="get" class="row g-2 mb-3">
-        <div class="col-md-3">
-            <select name="status" class="form-select">
-                <option value="">All Status</option>
-                <option value="open" {% if request.GET.status == 'open' %}selected{% endif %}>Open</option>
-                <option value="reviewed" {% if request.GET.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
-                <option value="resolved" {% if request.GET.status == 'resolved' %}selected{% endif %}>Resolved</option>
-            </select>
-        </div>
-        <div class="col-md-4">
-            <select name="category" class="form-select">
-                <option value="">All Categories</option>
-                <option value="general" {% if request.GET.category == 'general' %}selected{% endif %}>General Feedback</option>
-                <option value="issue" {% if request.GET.category == 'issue' %}selected{% endif %}>Issue Report</option>
-                <option value="task" {% if request.GET.category == 'task' %}selected{% endif %}>Task Related</option>
-                <option value="training" {% if request.GET.category == 'training' %}selected{% endif %}>Training Related</option>
-                <option value="survey" {% if request.GET.category == 'survey' %}selected{% endif %}>Survey Response</option>
-                <option value="other" {% if request.GET.category == 'other' %}selected{% endif %}>Other</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
-        </div>
-    </form>
+    <!-- Title -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-success mb-0">📋 Feedback Dashboard</h2>
 
-    <!-- Table -->
-    <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>From</th>
-                    <th>Category</th>
-                    <th>Message</th>
-                    <th>Status</th>
-                    <th>Sentiment</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for fb in feedback_list %}
-                <tr>
-                    <td>{{ fb.display_sender }}</td>
-                    <td>{{ fb.get_category_display }}</td>
-                    <td>{{ fb.message|truncatechars:80 }}</td>
-                    <td>
-                        {% if fb.status == 'open' %}
-                            <span class="badge text-bg-warning">Open</span>
-                        {% elif fb.status == 'reviewed' %}
-                            <span class="badge text-bg-primary">Reviewed</span>
-                        {% elif fb.status == 'resolved' %}
-                            <span class="badge text-bg-success">Resolved</span>
-                        {% else %}
-                            {{ fb.get_status_display }}
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if fb.sentiment == 'positive' %}
-                            <span class="badge text-bg-success">Positive</span>
-                        {% elif fb.sentiment == 'negative' %}
-                            <span class="badge text-bg-danger">Negative</span>
-                        {% elif fb.sentiment == 'neutral' %}
-                            <span class="badge text-bg-secondary">Neutral</span>
-                        {% else %}
-                            <span class="badge text-bg-light text-dark">N/A</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'feedback_update' fb.id %}" class="btn btn-sm btn-primary">
-                            Review
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center text-muted">No feedback found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% if user.role|lower == "volunteer" %}
+            <div>
+                <a href="{% url 'feedback_create' %}" class="btn btn-success me-2">
+                    <i class="bi bi-plus-circle"></i> Submit Feedback
+                </a>
+                <a href="{% url 'my_feedback' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-person-lines-fill"></i> My Feedback
+                </a>
+            </div>
+        {% endif %}
     </div>
 
-    {% if is_paginated %}
-        <nav>
-            <ul class="pagination">
-                {% if page_obj.has_previous %}
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
-                {% endif %}
-                {% for i in paginator.page_range %}
-                    <li class="page-item {% if page_obj.number == i %}active{% endif %}">
-                        <a class="page-link" href="?page={{ i }}">{{ i }}</a>
-                    </li>
-                {% endfor %}
-                {% if page_obj.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
-                {% endif %}
-            </ul>
-        </nav>
+    <!-- Flash messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if feedbacks %}
+        <div class="table-responsive shadow-sm rounded">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Category</th>
+                        <th>Message</th>
+                        <th>Sentiment</th>
+                        <th>Status</th>
+                        <th>Response</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fb in feedbacks %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                {% if fb.anonymous %}
+                                    <span class="text-muted fst-italic">Anonymous</span>
+                                {% else %}
+                                    {{ fb.from_user.get_full_name|default:fb.from_user.username }}
+                                {% endif %}
+                            </td>
+                            <td>{{ fb.to_user.get_full_name|default:fb.to_user.username }}</td>
+                            <td>{{ fb.get_category_display }}</td>
+                            <td>{{ fb.message|truncatewords:15 }}</td>
+                            <td>
+                                {% if fb.sentiment == "positive" %}
+                                    <span class="badge bg-success">😊 Positive</span>
+                                {% elif fb.sentiment == "negative" %}
+                                    <span class="badge bg-danger">☹️ Negative</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">😐 Neutral</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if fb.status == "resolved" %}
+                                    <span class="badge bg-success">Resolved</span>
+                                {% elif fb.status == "reviewed" %}
+                                    <span class="badge bg-primary">Reviewed</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Open</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if fb.response %}
+                                    {{ fb.response|truncatewords:12 }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <!-- Volunteer: edit/delete own open feedback -->
+                                {% if user.role|lower == "volunteer" and fb.from_user == user and fb.status == "open" %}
+                                    <a href="{% url 'feedback_update' fb.pk %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        ✏ Edit
+                                    </a>
+                                    <a href="{% url 'feedback_delete' fb.pk %}" 
+                                       class="btn btn-sm btn-outline-danger"
+                                       onclick="return confirm('Are you sure you want to delete this feedback?');">
+                                        🗑 Delete
+                                    </a>
+                                {% endif %}
+
+                                <!-- Coordinator/Admin: respond or resolve -->
+                                {% if user.role in "Coordinator Admin" or user.is_staff %}
+                                    <a href="{% url 'feedback_response' fb.pk %}" 
+                                       class="btn btn-sm btn-outline-success">
+                                        💬 Respond
+                                    </a>
+                                    {% if fb.status != "resolved" %}
+                                        <a href="{% url 'mark_feedback_resolved' fb.pk %}" 
+                                           class="btn btn-sm btn-outline-secondary"
+                                           onclick="return confirm('Mark this feedback as resolved?');">
+                                            ✅ Resolve
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info shadow-sm rounded">
+            No feedback has been submitted yet.
+        </div>
     {% endif %}
 </div>
 {% endblock %}
