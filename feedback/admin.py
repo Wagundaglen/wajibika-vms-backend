@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Feedback
+from .models import Feedback, Survey, Question, SurveyResponse
 
-
+# -------------------------------------------------
+# Feedback Admin
+# -------------------------------------------------
 @admin.register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):
     list_display = (
@@ -10,17 +12,17 @@ class FeedbackAdmin(admin.ModelAdmin):
         'to_user',
         'display_sender',
         'category',
-        'sentiment',  # raw editable
-        'sentiment_colored',  # colored badge
-        'status',  # raw editable
-        'status_colored',  # colored badge
+        'sentiment',
+        'sentiment_colored',
+        'status',
+        'status_colored',
         'created_at',
         'anonymous',
     )
     list_filter = ('status', 'sentiment', 'category', 'anonymous', 'created_at')
     search_fields = ('message', 'to_user__username', 'from_user__username')
     list_editable = ('status', 'sentiment')
-    ordering = ('-created_at',)  # newest first
+    ordering = ('-created_at',)
     date_hierarchy = 'created_at'
 
     def display_sender(self, obj):
@@ -52,3 +54,35 @@ class FeedbackAdmin(admin.ModelAdmin):
             obj.get_sentiment_display()
         )
     sentiment_colored.short_description = "Sentiment (Colored)"
+
+# -------------------------------------------------
+# Survey Admin
+# -------------------------------------------------
+@admin.register(Survey)
+class SurveyAdmin(admin.ModelAdmin):
+    list_display = ('title', 'created_by', 'is_active', 'created_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('title', 'description')
+    ordering = ('-created_at',)
+    date_hierarchy = 'created_at'
+
+# -------------------------------------------------
+# Question Admin
+# -------------------------------------------------
+@admin.register(Question)
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = ('text', 'survey', 'question_type')
+    list_filter = ('question_type', 'survey')
+    search_fields = ('text',)
+    ordering = ('id',)
+
+# -------------------------------------------------
+# Survey Response Admin
+# -------------------------------------------------
+@admin.register(SurveyResponse)
+class SurveyResponseAdmin(admin.ModelAdmin):
+    list_display = ('user', 'survey', 'status', 'created_at')
+    list_filter = ('status', 'survey')
+    search_fields = ('user__username', 'survey__title')
+    ordering = ('-created_at',)
+    date_hierarchy = 'created_at'

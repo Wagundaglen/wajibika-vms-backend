@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+      <div class="card shadow-lg border-0 rounded-3">
+        <div class="card-header bg-primary text-white text-center">
+          <h3 class="mb-0">
+            {% if form.instance.pk %} Update Survey {% else %} Create a New Survey {% endif %}
+          </h3>
+        </div>
+        <div class="card-body p-4">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="mb-3">
+              {{ form.title|as_crispy_field }}
+            </div>
+            <div class="mb-3">
+              {{ form.description|as_crispy_field }}
+            </div>
+            <div class="mb-3">
+              {{ form.instructions|as_crispy_field }}
+            </div>
+            <div class="mb-3">
+              {{ form.category|as_crispy_field }}
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                {{ form.start_date|as_crispy_field }}
+              </div>
+              <div class="col-md-6 mb-3">
+                {{ form.end_date|as_crispy_field }}
+              </div>
+            </div>
+            <div class="form-check mb-3">
+              {{ form.is_active }}
+              <label class="form-check-label" for="id_is_active">Active</label>
+            </div>
+
+            <!-- Questions Section -->
+            <div class="mb-4">
+              <h5>Survey Questions</h5>
+              <div id="questions-formset">
+                {% for question_form in formset.forms %}
+                  <div class="border p-3 mb-2 rounded">
+                    {{ question_form.text|as_crispy_field }}
+                    {{ question_form.question_type|as_crispy_field }}
+                    <button type="button" class="btn btn-danger btn-sm remove-question" style="float: right;">
+                      Remove
+                    </button>
+                  </div>
+                {% endfor %}
+              </div>
+              <button type="button" class="btn btn-primary" id="add-question">
+                Add Question
+              </button>
+            </div>
+
+            <div class="text-end mt-3">
+              <button type="submit" class="btn btn-success px-4">
+                <i class="bi bi-check-circle"></i> Save Survey
+              </button>
+              <a href="{% url 'survey_list' %}" class="btn btn-secondary">
+                Cancel
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript for Dynamic Question Handling -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addQuestionButton = document.getElementById('add-question');
+    const questionsFormset = document.getElementById('questions-formset');
+
+    addQuestionButton.addEventListener('click', function() {
+        const totalForms = document.querySelectorAll('#questions-formset > div').length;
+        const newForm = `
+            <div class="border p-3 mb-2 rounded">
+                <input type="text" name="form-${totalForms}-text" class="form-control mb-2" placeholder="Enter question text" required>
+                <select name="form-${totalForms}-question_type" class="form-select mb-2" required>
+                    <option value="text">Text</option>
+                    <option value="multiple_choice">Multiple Choice</option>
+                </select>
+                <button type="button" class="btn btn-danger btn-sm remove-question" style="float: right;">Remove</button>
+            </div>
+        `;
+        questionsFormset.insertAdjacentHTML('beforeend', newForm);
+    });
+
+    questionsFormset.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-question')) {
+            e.target.closest('div').remove();
+        }
+    });
+});
+</script>
+
+{% endblock %}
