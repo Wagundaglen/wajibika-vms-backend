@@ -47,4 +47,11 @@ urlpatterns = [
     # Survey Response Detail
     # ---------------------------------
     path("surveys/responses/<int:pk>/", views.SurveyResponseDetailView.as_view(), name="survey_response_detail"),
+
+    # ---------------------------------
+    # Surveys Assigned to Logged-in Volunteer
+    # ---------------------------------
+    path("my-surveys/", views.AssignedSurveyListView.as_view(), name="assigned_surveys"),
+
 ]
+

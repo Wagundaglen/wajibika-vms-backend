@@ -4,16 +4,49 @@
 
 <form method="POST">
     {% csrf_token %}
+
     <div class="mb-3">
         <label for="id_survey" class="form-label">Select Survey:</label>
         {{ form.survey }}
     </div>
 
     <div class="mb-3">
-        <label for="id_volunteers" class="form-label">Select Specific Volunteers (leave empty for all):</label>
+        <label class="form-label">Send To:</label><br>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="send_to" id="send_all" value="all" checked>
+            <label class="form-check-label" for="send_all">All Volunteers</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="send_to" id="send_specific" value="specific">
+            <label class="form-check-label" for="send_specific">Specific Volunteers</label>
+        </div>
+    </div>
+
+    <div class="mb-3" id="volunteers_div" style="display: none;">
+        <label for="id_volunteers" class="form-label">Select Volunteers:</label>
         {{ form.volunteers }}
     </div>
 
     <button type="submit" class="btn btn-primary">Send Survey</button>
 </form>
+
+<script>
+    const sendAllRadio = document.getElementById('send_all');
+    const sendSpecificRadio = document.getElementById('send_specific');
+    const volunteersDiv = document.getElementById('volunteers_div');
+
+    function toggleVolunteers() {
+        if (sendSpecificRadio.checked) {
+            volunteersDiv.style.display = 'block';
+        } else {
+            volunteersDiv.style.display = 'none';
+        }
+    }
+
+    sendAllRadio.addEventListener('change', toggleVolunteers);
+    sendSpecificRadio.addEventListener('change', toggleVolunteers);
+
+    // Initialize on page load
+    toggleVolunteers();
+</script>
 {% endblock %}

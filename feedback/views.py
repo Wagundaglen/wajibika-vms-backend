@@ -3,6 +3,7 @@ from django.views.generic import (
     CreateView, ListView, UpdateView, DetailView, DeleteView, TemplateView
 )
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.contrib import messages
 from django.urls import reverse_lazy
@@ -44,14 +45,14 @@ class FeedbackCreateView(CreateView):
 
 
 @method_decorator(login_required, name="dispatch")
-class MyFeedbackListView(ListView):
+class MyFeedbackListView(LoginRequiredMixin, ListView):
     model = Feedback
     template_name = "feedback/my_feedback.html"
     context_object_name = "feedbacks"
 
     def get_queryset(self):
-        return Feedback.objects.filter(submitted_by=self.request.user)
-
+        # show only feedback submitted by the logged-in user
+        return Feedback.objects.filter(from_user=self.request.user)
 
 @method_decorator(login_required, name="dispatch")
 class FeedbackDashboardView(TemplateView):
@@ -59,13 +60,19 @@ class FeedbackDashboardView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if is_admin_or_coordinator(self.request.user):
-            context["feedbacks"] = Feedback.objects.all()
-            context["surveys"] = Survey.objects.all()
-        else:
-            context["feedbacks"] = Feedback.objects.filter(submitted_by=self.request.user)
-            context["surveys"] = Survey.objects.filter(is_active=True)
+        user = self.request.user
+
+        # Feedbacks submitted by the logged-in user (volunteer)
+        context["my_feedbacks"] = Feedback.objects.filter(from_user=user)
+
+        # Feedbacks assigned to this user (if coordinator/admin)
+        context["assigned_feedbacks"] = Feedback.objects.filter(to_user=user)
+
+        # Surveys assigned to this user
+        context["my_surveys"] = Survey.objects.filter(assigned_users=user)
+
         return context
+
 
 
 @method_decorator(login_required, name="dispatch")
@@ -185,7 +192,8 @@ class SurveyListView(ListView):
     def get_queryset(self):
         if is_admin_or_coordinator(self.request.user):
             return Survey.objects.all()
-        return Survey.objects.none()
+        # Volunteers only see surveys assigned to them
+        return Survey.objects.filter(surveyresponse__user=self.request.user).distinct()
 
 
 @method_decorator(login_required, name="dispatch")
@@ -199,6 +207,17 @@ class SurveyCreateView(CreateView):
         if not is_admin_or_coordinator(request.user):
             return HttpResponseForbidden("Not allowed to create surveys.")
         return super().dispatch(request, *args, **kwargs)
+
+
+@method_decorator(login_required, name="dispatch")
+class AssignedSurveyListView(ListView):
+    model = Survey
+    template_name = "feedback/assigned_surveys.html"
+    context_object_name = "surveys"
+
+    def get_queryset(self):
+        # Assuming Survey model has a ManyToManyField "assigned_users"
+        return Survey.objects.filter(assigned_users=self.request.user)
 
 
 @method_decorator(login_required, name="dispatch")
@@ -303,23 +322,20 @@ def send_survey(request):
             survey = form.cleaned_data['survey']
             selected_volunteers = form.cleaned_data['volunteers']
 
-            if not selected_volunteers:
-                # Send to all volunteers
-                volunteers = User.objects.filter(is_staff=False)
-                for v in volunteers:
-                    SurveyResponse.objects.get_or_create(user=v, survey=survey)
-                messages.success(request, f"Survey '{survey.title}' sent to ALL volunteers.")
-            else:
-                for v in selected_volunteers:
-                    SurveyResponse.objects.get_or_create(user=v, survey=survey)
-                messages.success(request, f"Survey '{survey.title}' sent to selected volunteers.")
+            volunteers = selected_volunteers if selected_volunteers else User.objects.filter(is_staff=False)
 
+            sent_count = 0
+            for v in volunteers:
+                if not SurveyResponse.objects.filter(user=v, survey=survey).exists():
+                    SurveyResponse.objects.create(user=v, survey=survey, answers={})
+                    sent_count += 1
+
+            messages.success(request, f"Survey '{survey.title}' sent to {sent_count} volunteers.")
             return redirect("feedback:survey_list")
     else:
         form = SendSurveyForm()
 
     return render(request, "feedback/send_survey.html", {"form": form})
-
 
 
 # -------------------------------------------------
@@ -328,10 +344,22 @@ def send_survey(request):
 @login_required
 def submit_survey(request, pk):
     survey = get_object_or_404(Survey, pk=pk)
+
+    # Ensure the volunteer has been assigned
+    survey_response = SurveyResponse.objects.filter(user=request.user, survey=survey).first()
+    if not survey_response:
+        return HttpResponseForbidden("You were not assigned this survey.")
+
     if request.method == "POST":
-        SurveyResponse.objects.create(user=request.user, survey=survey, answers=request.POST.dict())
+        answers = {}
+        for q in survey.questions.all():
+            answers[str(q.id)] = request.POST.get(f"question_{q.id}", "")
+
+        survey_response.answers = answers
+        survey_response.save()
         messages.success(request, "Survey submitted successfully!")
         return redirect("feedback:survey_thanks")
+
     return render(request, "feedback/survey_submit.html", {"survey": survey})
 
 
