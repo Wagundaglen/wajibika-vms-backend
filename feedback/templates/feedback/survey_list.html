@@ -2,55 +2,72 @@
 
 {% block content %}
 <div class="container py-5">
+  <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold">📋 Available Surveys</h2>
     {% if user.role|lower == "admin" or user.role|lower == "coordinator" %}
-      <a href="{% url 'survey_create' %}" class="btn btn-primary">
+      <a href="{% url 'feedback:survey_create' %}" class="btn btn-primary">
         <i class="bi bi-plus-circle"></i> Create Survey
       </a>
     {% endif %}
   </div>
 
-  <!-- Send Survey Form -->
+  <!-- Send Survey Form (Admins/Coordinators only) -->
   {% if user.role|lower == "admin" or user.role|lower == "coordinator" %}
-  <div class="card mb-4">
-    <div class="card-body">
-      <form method="POST" action="{% url 'send_survey' %}">
-        {% csrf_token %}
-        <div class="mb-3">
-          <label for="surveySelect" class="form-label">Select Survey</label>
-          <select id="surveySelect" name="survey" class="form-select" required>
-            <option value="">-- Choose a Survey --</option>
-            {% for survey in surveys %}
-              <option value="{{ survey.id }}">{{ survey.title }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Send To:</label>
-          <div>
-            <input type="radio" id="sendToAll" name="recipient" value="all" checked>
-            <label for="sendToAll">All Volunteers</label>
+    <div class="card shadow-sm border-0 rounded-3 mb-5">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">📨 Send Survey to Volunteers</h5>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{% url 'feedback:send_survey' %}">
+          {% csrf_token %}
+          
+          <!-- Survey Selection -->
+          <div class="mb-3">
+            <label for="surveySelect" class="form-label fw-bold">Select Survey</label>
+            <select id="surveySelect" name="survey" class="form-select" required>
+              <option value="">-- Choose a Survey --</option>
+              {% for survey in surveys %}
+                <option value="{{ survey.id }}">{{ survey.title }}</option>
+              {% endfor %}
+            </select>
           </div>
-          <div>
-            <input type="radio" id="sendToSpecific" name="recipient" value="specific">
-            <label for="sendToSpecific">Specific Volunteers</label>
+
+          <!-- Recipient Selection -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">Send To:</label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" id="sendToAll" name="recipient" value="all" checked>
+              <label class="form-check-label" for="sendToAll">All Volunteers</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" id="sendToSpecific" name="recipient" value="specific">
+              <label class="form-check-label" for="sendToSpecific">Specific Volunteers</label>
+            </div>
           </div>
-        </div>
-        <div id="specificVolunteers" class="mb-3" style="display: none;">
-          <label for="volunteerSelect" class="form-label">Select Volunteers</label>
-          <select id="volunteerSelect" name="volunteers" class="form-select" multiple>
-            {% for volunteer in volunteers %}
-              <option value="{{ volunteer.id }}">{{ volunteer.get_full_name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <button type="submit" class="btn btn-primary">Send Survey</button>
-      </form>
+
+          <!-- Specific Volunteer Selection -->
+          <div id="specificVolunteers" class="mb-3" style="display: none;">
+            <label for="volunteerSelect" class="form-label fw-bold">Select Volunteers</label>
+            <select id="volunteerSelect" name="volunteers" class="form-select" multiple>
+              {% for volunteer in volunteers %}
+                <option value="{{ volunteer.id }}">{{ volunteer.get_full_name }}</option>
+              {% endfor %}
+            </select>
+            <small class="text-muted">Hold CTRL (or CMD on Mac) to select multiple volunteers.</small>
+          </div>
+
+          <div class="text-end">
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-send"></i> Send Survey
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
   {% endif %}
 
+  <!-- Survey List -->
   {% if surveys %}
     <div class="row">
       {% for survey in surveys %}
@@ -58,21 +75,39 @@
           <div class="card h-100 shadow-sm border-0 rounded-3">
             <div class="card-body">
               <h5 class="card-title fw-bold">{{ survey.title }}</h5>
-              <p class="card-text text-muted">{{ survey.description|truncatewords:20 }}</p>
-              <p class="small text-secondary mb-2">
-                Created on: {{ survey.created_at|date:"M d, Y" }}
+              <p class="card-text text-muted">
+                {{ survey.description|truncatewords:20 }}
               </p>
-              <div class="d-flex justify-content-between mt-3">
-                <a href="{% url 'survey_detail' survey.pk %}" class="btn btn-outline-primary btn-sm">
-                  View Details
+              <p class="small text-secondary mb-2">
+                <i class="bi bi-calendar-event"></i> Created on: {{ survey.created_at|date:"M d, Y" }}
+              </p>
+
+              <!-- Actions -->
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                <a href="{% url 'feedback:survey_detail' survey.pk %}" class="btn btn-outline-primary btn-sm">
+                  View
                 </a>
-                <a href="{% url 'submit_survey' survey.pk %}" class="btn btn-success btn-sm">
-                  Fill Survey
-                </a>
+
                 {% if user.role|lower == "admin" or user.role|lower == "coordinator" %}
-                  <a href="{% url 'question_create' survey.pk %}" class="btn btn-warning btn-sm">
-                    Manage Questions
+                  <a href="{% url 'feedback:survey_update' survey.pk %}" class="btn btn-outline-secondary btn-sm">
+                    Edit
                   </a>
+                  <a href="{% url 'feedback:survey_delete' survey.pk %}" class="btn btn-outline-danger btn-sm">
+                    Delete
+                  </a>
+                  <a href="{% url 'feedback:question_add' survey.pk %}" class="btn btn-warning btn-sm">
+                    Questions
+                  </a>
+
+                  <!-- Send Survey (Direct) -->
+                  <form method="POST" action="{% url 'feedback:send_survey' %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="survey" value="{{ survey.pk }}">
+                    <input type="hidden" name="recipient" value="all">
+                    <button type="submit" class="btn btn-success btn-sm">
+                      <i class="bi bi-send"></i> Send
+                    </button>
+                  </form>
                 {% endif %}
               </div>
             </div>
@@ -81,18 +116,19 @@
       {% endfor %}
     </div>
   {% else %}
-    <div class="alert alert-info">No surveys available at the moment.</div>
+    <div class="alert alert-info">
+      No surveys available at the moment.
+    </div>
   {% endif %}
 </div>
 
+<!-- Script to toggle volunteer selection -->
 <script>
-    // Toggle visibility of specific volunteers selection
-    document.querySelectorAll('input[name="recipient"]').forEach((elem) => {
-        elem.addEventListener("change", function(event) {
-            const specificVolunteersDiv = document.getElementById("specificVolunteers");
-            specificVolunteersDiv.style.display = event.target.value === "specific" ? "block" : "none";
-        });
+  document.querySelectorAll('input[name="recipient"]').forEach((elem) => {
+    elem.addEventListener("change", function(event) {
+      const specificVolunteersDiv = document.getElementById("specificVolunteers");
+      specificVolunteersDiv.style.display = event.target.value === "specific" ? "block" : "none";
     });
+  });
 </script>
-
 {% endblock %}

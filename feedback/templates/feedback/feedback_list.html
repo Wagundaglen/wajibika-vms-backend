@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Feedback Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">Feedback Dashboard</h2>
+        <a href="{% url 'feedback:feedback_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Submit Feedback
+        </a>
+    </div>
+
+    <!-- Search + Filter -->
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-md-4">
+            <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
+                   placeholder="Search feedback...">
+        </div>
+        <div class="col-md-3">
+            <select name="status" class="form-select">
+                <option value="">All Status</option>
+                <option value="open" {% if request.GET.status == "open" %}selected{% endif %}>Open</option>
+                <option value="resolved" {% if request.GET.status == "resolved" %}selected{% endif %}>Resolved</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-search"></i> Filter
+            </button>
+            <a href="{% url 'feedback:feedback_dashboard' %}" class="btn btn-outline-danger">
+                <i class="bi bi-x-circle"></i> Reset
+            </a>
+        </div>
+    </form>
+
+    <!-- Feedback List -->
+    {% if feedbacks %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle shadow-sm rounded">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Submitted By</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for feedback in feedbacks %}
+                        <tr>
+                            <td>#{{ feedback.id }}</td>
+                            <td>
+                                <a href="{% url 'feedback:feedback_detail' feedback.pk %}" class="text-decoration-none">
+                                    {{ feedback.title }}
+                                </a>
+                            </td>
+                            <td>{{ feedback.user.username }}</td>
+                            <td>{{ feedback.created_at|date:"M d, Y" }}</td>
+                            <td>
+                                {% if feedback.is_resolved %}
+                                    <span class="badge bg-success">Resolved</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Open</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'feedback:feedback_detail' feedback.pk %}" class="btn btn-sm btn-info">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if request.user == feedback.user or request.user.is_staff %}
+                                    <a href="{% url 'feedback:feedback_update' feedback.pk %}" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'feedback:feedback_delete' feedback.pk %}" 
+                                       class="btn btn-sm btn-danger"
+                                       onclick="return confirm('Are you sure you want to delete this feedback?');">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center">
+            No feedback found. <a href="{% url 'feedback:feedback_create' %}">Submit one now!</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

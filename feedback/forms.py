@@ -1,6 +1,10 @@
 from django import forms
-from .models import Feedback, Survey, SurveyResponse, Question
+from django.contrib.auth import get_user_model
+from .models import Feedback, FeedbackResponse, Survey, SurveyResponse, Question, SurveyAnswer
 from .utils import analyze_sentiment
+
+User = get_user_model()
+
 
 # ======================================================
 # FEEDBACK FORMS
@@ -30,7 +34,7 @@ class FeedbackForm(forms.ModelForm):
         # Link logged-in user unless anonymous
         if self.user and not feedback.anonymous:
             feedback.from_user = self.user
-        # Auto-run sentiment analysis on message
+        # Auto-run sentiment analysis
         if not feedback.sentiment or ('message' in getattr(self, 'changed_data', [])):
             feedback.sentiment = analyze_sentiment(feedback.message or "")
         if commit:
@@ -39,13 +43,12 @@ class FeedbackForm(forms.ModelForm):
 
 
 class FeedbackResponseForm(forms.ModelForm):
-    """Admin/Coordinator responds to feedback."""
+    """Admin/Coordinator adds a threaded response to feedback."""
     class Meta:
-        model = Feedback
-        fields = ['status', 'response']
+        model = FeedbackResponse
+        fields = ['message']
         widgets = {
-            'status': forms.Select(attrs={'class': 'form-select'}),
-            'response': forms.Textarea(attrs={
+            'message': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
                 'placeholder': 'Write a reply or resolution notes...'
@@ -56,7 +59,6 @@ class FeedbackResponseForm(forms.ModelForm):
 # ======================================================
 # SURVEY FORMS
 # ======================================================
-
 class AdminSurveyForm(forms.ModelForm):
     """Admin/Coordinator creates a new survey (CRUD)."""
     class Meta:
@@ -94,29 +96,56 @@ class AdminSurveyForm(forms.ModelForm):
         }
 
 
-class SurveyResponseForm(forms.ModelForm):
-    """Volunteer submits responses to a survey with fixed Q1, Q2, and rating."""
-    class Meta:
-        model = SurveyResponse
-        fields = ['q1', 'q2', 'rating']
-        widgets = {
-            'q1': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Answer question 1...'
-            }),
-            'q2': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Answer question 2...'
-            }),
-            'rating': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 1,
-                'max': 5,
-                'placeholder': 'Rate 1 (Poor) to 5 (Excellent)'
-            }),
-        }
+# ✅ Alias for backward compatibility with views.py
+class SurveyForm(AdminSurveyForm):
+    """Alias of AdminSurveyForm so imports won't break."""
+    pass
+
+
+class DynamicSurveyResponseForm(forms.Form):
+    """
+    Volunteer submits responses dynamically based on Survey Questions.
+    Builds fields at runtime depending on the linked survey questions.
+    """
+    def __init__(self, *args, **kwargs):
+        survey = kwargs.pop('survey')
+        super().__init__(*args, **kwargs)
+
+        for question in survey.questions.all():
+            field_name = f"question_{question.id}"
+
+            if question.question_type == 'text':
+                self.fields[field_name] = forms.CharField(
+                    label=question.text,
+                    required=question.required,
+                    widget=forms.Textarea(attrs={
+                        'class': 'form-control',
+                        'rows': 3,
+                        'placeholder': 'Your answer...'
+                    })
+                )
+
+            elif question.question_type == 'multiple_choice':
+                self.fields[field_name] = forms.CharField(
+                    label=question.text,
+                    required=question.required,
+                    widget=forms.TextInput(attrs={
+                        'class': 'form-control',
+                        'placeholder': 'Enter your choice...'
+                    })
+                )
+
+            elif question.question_type == 'rating':
+                self.fields[field_name] = forms.IntegerField(
+                    label=question.text,
+                    required=question.required,
+                    widget=forms.NumberInput(attrs={
+                        'class': 'form-control',
+                        'min': 1,
+                        'max': 5,
+                        'placeholder': 'Rate 1 (Poor) to 5 (Excellent)'
+                    })
+                )
 
 
 # ======================================================
@@ -124,17 +153,30 @@ class SurveyResponseForm(forms.ModelForm):
 # ======================================================
 class QuestionForm(forms.ModelForm):
     """Admin/Coordinator creates a new question for a survey."""
-    required = forms.BooleanField(required=False)  # Ensure this line exists
-
     class Meta:
         model = Question
-        fields = ['text', 'question_type', 'required']  # Include 'required'
+        fields = ['text', 'question_type', 'required']
         widgets = {
             'text': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Enter question text'
             }),
-            'question_type': forms.Select(attrs={
-                'class': 'form-select'
-            }),
+            'question_type': forms.Select(attrs={'class': 'form-select'}),
         }
+
+
+# ======================================================
+# SEND SURVEY FORM (NEW)
+# ======================================================
+class SendSurveyForm(forms.Form):
+    survey = forms.ModelChoiceField(
+        queryset=Survey.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Select Survey"
+    )
+    volunteers = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(is_staff=False),  # Only volunteers
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-select'}),
+        label="Select Specific Volunteers (leave empty for all)"
+    )

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Send Survey</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="id_survey" class="form-label">Select Survey:</label>
+        {{ form.survey }}
+    </div>
+
+    <div class="mb-3">
+        <label for="id_volunteers" class="form-label">Select Specific Volunteers (leave empty for all):</label>
+        {{ form.volunteers }}
+    </div>
+
+    <button type="submit" class="btn btn-primary">Send Survey</button>
+</form>
+{% endblock %}

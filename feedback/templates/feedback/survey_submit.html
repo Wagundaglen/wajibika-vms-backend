@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="card shadow-lg border-0 rounded-3">
+    <div class="card-header bg-success text-white">
+      <h4 class="mb-0">Respond to Survey: {{ survey.title }}</h4>
+    </div>
+    <div class="card-body p-4">
+      <form method="post">
+        {% csrf_token %}
+
+        {% for field in form %}
+          <div class="mb-4">
+            <label class="form-label fw-bold">
+              {{ field.label }}
+              {% if field.field.required %}
+                <span class="text-danger">*</span>
+              {% endif %}
+            </label>
+            
+            <!-- Render field -->
+            {{ field }}
+
+            <!-- Errors -->
+            {% if field.errors %}
+              <div class="text-danger small mt-1">
+                {{ field.errors|striptags }}
+              </div>
+            {% endif %}
+
+            <!-- Help text -->
+            {% if field.help_text %}
+              <div class="form-text">{{ field.help_text }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+
+        <div class="text-end mt-4">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-circle"></i> Submit Response
+          </button>
+          <a href="{% url 'survey_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Surveys
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -3,25 +3,39 @@
 {% block content %}
 <div class="container py-5">
   <div class="card shadow-lg border-0 rounded-3">
-    <div class="card-header bg-success text-white">
-      <h4 class="mb-0">Respond to Survey: {{ survey.title }}</h4>
+    <div class="card-header bg-info text-white">
+      <h4 class="mb-0">Survey Response: {{ response.survey.title }}</h4>
     </div>
     <div class="card-body p-4">
-      <form method="post">
-        {% csrf_token %}
-        
-        <!-- Render the survey response form fields -->
-        {{ form.as_p }}
+      <p><strong>Respondent:</strong> {{ response.user.get_full_name }} ({{ response.user.username }})</p>
+      <p><strong>Submitted:</strong> {{ response.submitted_at|date:"M d, Y H:i" }}</p>
+      <p><strong>Status:</strong>
+        {% if response.status == "completed" %}
+          <span class="badge bg-success">Completed</span>
+        {% else %}
+          <span class="badge bg-warning text-dark">Pending</span>
+        {% endif %}
+      </p>
+      
+      <hr>
 
-        <div class="text-end mt-4">
-          <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-circle"></i> Submit Response
-          </button>
-          <a href="{% url 'survey_list' %}" class="btn btn-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Surveys
-          </a>
-        </div>
-      </form>
+      <h5 class="mb-3">Responses</h5>
+      <ul class="list-group">
+        {% for answer in response.answers.all %}
+          <li class="list-group-item">
+            <strong>{{ answer.question.text }}</strong><br>
+            {{ answer.text_response|default:"—" }}
+          </li>
+        {% empty %}
+          <li class="list-group-item text-muted">No answers submitted.</li>
+        {% endfor %}
+      </ul>
+
+      <div class="mt-4">
+        <a href="{% url 'survey_detail' response.survey.id %}" class="btn btn-secondary">
+          <i class="bi bi-arrow-left"></i> Back to Survey
+        </a>
+      </div>
     </div>
   </div>
 </div>

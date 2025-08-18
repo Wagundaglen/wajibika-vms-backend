@@ -8,21 +8,21 @@
 
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-        <h2 class="fw-bold text-primary">📋 Feedback Dashboard</h2>
+        <h2 class="fw-bold text-primary">📋 Feedback & Survey Dashboard</h2>
 
         <div class="d-flex flex-wrap gap-2">
             {% if user.role|lower == "volunteer" %}
-                <a href="{% url 'feedback_create' %}" class="btn btn-primary shadow-sm">
+                <a href="{% url 'feedback:feedback_create' %}" class="btn btn-primary shadow-sm">
                     <i class="bi bi-plus-circle"></i> Submit Feedback
                 </a>
-                <a href="{% url 'my_feedback' %}" class="btn btn-outline-secondary shadow-sm">
+                <a href="{% url 'feedback:my_feedback' %}" class="btn btn-outline-secondary shadow-sm">
                     <i class="bi bi-person-lines-fill"></i> My Feedback
                 </a>
             {% endif %}
 
-            {% if user.role|lower == "coordinator" or user.role|lower == "admin" or user.is_staff %}
-                <a href="{% url 'survey_create' %}" class="btn btn-info shadow-sm">
-                    <i class="bi bi-envelope-paper"></i> Send Survey
+            {% if user.role|lower in "coordinator admin" or user.is_staff %}
+                <a href="{% url 'feedback:survey_create' %}" class="btn btn-info shadow-sm">
+                    <i class="bi bi-plus-circle"></i> Create Survey
                 </a>
             {% endif %}
         </div>
@@ -38,207 +38,304 @@
         {% endfor %}
     {% endif %}
 
-    <!-- Feedback Table -->
-    {% if feedbacks %}
-        <div class="card shadow-lg border-0 rounded-3 mb-4">
-            <div class="card-body">
-                <h5>Your Feedback</h5>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-primary text-dark">
-                            <tr>
-                                <th>#</th>
-                                <th>From</th>
-                                <th>To</th>
-                                <th>Category</th>
-                                <th>Message</th>
-                                <th>Sentiment</th>
-                                <th>Status</th>
-                                <th>Response</th>
-                                <th class="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for fb in feedbacks %}
+    <!-- Feedback Section -->
+    <div class="mb-5">
+        <h4 class="mb-3 text-secondary">📝 Feedback</h4>
+        {% if feedbacks %}
+            <div class="card shadow-lg border-0 rounded-3 mb-4">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-primary text-dark">
                                 <tr>
-                                    <td>{{ forloop.counter }}</td>
-                                    <td>
-                                        {% if fb.anonymous %}
-                                            <span class="text-muted fst-italic">Anonymous</span>
-                                        {% else %}
-                                            {{ fb.from_user.get_full_name|default:fb.from_user.username }}
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ fb.to_user.get_full_name|default:fb.to_user.username }}</td>
-                                    <td>{{ fb.get_category_display }}</td>
-                                    <td>{{ fb.message|truncatewords:12 }}</td>
-                                    <td>
-                                        {% if fb.sentiment == "positive" %}
-                                            <span class="badge bg-success">😊 Positive</span>
-                                        {% elif fb.sentiment == "negative" %}
-                                            <span class="badge bg-danger">☹️ Negative</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">😐 Neutral</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if fb.status == "resolved" %}
-                                            <span class="badge bg-success">Resolved</span>
-                                        {% elif fb.status == "reviewed" %}
-                                            <span class="badge bg-primary">Reviewed</span>
-                                        {% else %}
-                                            <span class="badge bg-warning text-dark">Open</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if fb.response %}
-                                            {{ fb.response|truncatewords:10 }}
-                                        {% else %}
-                                            <span class="text-muted">—</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        <!-- Dropdown for actions -->
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle shadow-sm"
-                                                    type="button"
-                                                    data-bs-toggle="dropdown"
-                                                    aria-expanded="false">
-                                                ⚙ Actions
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                <li>
-                                                    <a class="dropdown-item text-info"
-                                                       data-bs-toggle="modal"
-                                                       data-bs-target="#feedbackModal{{ fb.pk }}">
-                                                        👁 View Details
-                                                    </a>
-                                                </li>
-                                                {% if user.role|lower == "volunteer" and fb.from_user == user and fb.status == "open" %}
-                                                    <li><a href="{% url 'feedback_update' fb.pk %}" class="dropdown-item text-primary">✏ Edit</a></li>
-                                                    <li><a href="{% url 'feedback_delete' fb.pk %}" 
-                                                           class="dropdown-item text-danger"
-                                                           onclick="return confirm('Are you sure you want to delete this feedback?');">🗑 Delete</a></li>
-                                                {% endif %}
-                                                {% if user.role|lower == "coordinator" or user.role|lower == "admin" or user.is_staff %}
-                                                    <li><a href="{% url 'feedback_update' fb.pk %}" class="dropdown-item text-primary">✏ Edit</a></li>
-                                                    <li><a href="{% url 'feedback_response' fb.pk %}" class="dropdown-item text-success">💬 Respond</a></li>
-                                                    {% if fb.status != "resolved" %}
-                                                        <li><a href="{% url 'mark_feedback_resolved' fb.pk %}" 
-                                                               class="dropdown-item text-secondary"
-                                                               onclick="return confirm('Mark this feedback as resolved?');">✅ Resolve</a></li>
-                                                    {% endif %}
-                                                    <li><a href="{% url 'feedback_delete' fb.pk %}" 
-                                                           class="dropdown-item text-danger"
-                                                           onclick="return confirm('Are you sure you want to delete this feedback?');">🗑 Delete</a></li>
-                                                {% endif %}
-                                            </ul>
-                                        </div>
-                                    </td>
+                                    <th>#</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Category</th>
+                                    <th>Message</th>
+                                    <th>Sentiment</th>
+                                    <th>Status</th>
+                                    <th>Response</th>
+                                    <th class="text-center">Actions</th>
                                 </tr>
+                            </thead>
+                            <tbody>
+                                {% for fb in feedbacks %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            {% if fb.anonymous %}
+                                                <span class="text-muted fst-italic">Anonymous</span>
+                                            {% else %}
+                                                {{ fb.from_user.get_full_name|default:fb.from_user.username }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ fb.to_user.get_full_name|default:fb.to_user.username }}</td>
+                                        <td>{{ fb.get_category_display }}</td>
+                                        <td>{{ fb.message|truncatewords:12 }}</td>
+                                        <td>
+                                            {% if fb.sentiment == "positive" %}
+                                                <span class="badge bg-success">😊 Positive</span>
+                                            {% elif fb.sentiment == "negative" %}
+                                                <span class="badge bg-danger">☹️ Negative</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">😐 Neutral</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if fb.status == "resolved" %}
+                                                <span class="badge bg-success">Resolved</span>
+                                            {% elif fb.status == "reviewed" %}
+                                                <span class="badge bg-primary">Reviewed</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">Open</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if fb.response %}
+                                                {{ fb.response|truncatewords:10 }}
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle shadow-sm"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
+                                                        aria-expanded="false">
+                                                    ⚙ Actions
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <a class="dropdown-item text-info"
+                                                           data-bs-toggle="modal"
+                                                           data-bs-target="#feedbackModal{{ fb.pk }}">
+                                                            👁 View Details
+                                                        </a>
+                                                    </li>
+                                                    {% if user.role|lower == "volunteer" and fb.from_user == user and fb.status == "open" %}
+                                                        <li><a href="{% url 'feedback:feedback_update' fb.pk %}" class="dropdown-item text-primary">✏ Edit</a></li>
+                                                        <li><a href="{% url 'feedback:feedback_delete' fb.pk %}" 
+                                                               class="dropdown-item text-danger"
+                                                               onclick="return confirm('Are you sure you want to delete this feedback?');">🗑 Delete</a></li>
+                                                    {% endif %}
+                                                    {% if user.role|lower in "coordinator admin" or user.is_staff %}
+                                                        <li><a href="{% url 'feedback:feedback_update' fb.pk %}" class="dropdown-item text-primary">✏ Edit</a></li>
+                                                        <li><a href="{% url 'feedback:feedback_response' fb.pk %}" class="dropdown-item text-success">💬 Respond</a></li>
+                                                        {% if fb.status != "resolved" %}
+                                                            <li><a href="{% url 'feedback:mark_feedback_resolved' fb.pk %}" 
+                                                                   class="dropdown-item text-secondary"
+                                                                   onclick="return confirm('Mark this feedback as resolved?');">✅ Resolve</a></li>
+                                                        {% endif %}
+                                                        <li><a href="{% url 'feedback:feedback_delete' fb.pk %}" 
+                                                               class="dropdown-item text-danger"
+                                                               onclick="return confirm('Are you sure you want to delete this feedback?');">🗑 Delete</a></li>
+                                                    {% endif %}
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
 
-                                <!-- Feedback Modal -->
-                                <div class="modal fade" id="feedbackModal{{ fb.pk }}" tabindex="-1" aria-labelledby="feedbackModalLabel{{ fb.pk }}" aria-hidden="true">
-                                    <div class="modal-dialog modal-lg modal-dialog-centered">
-                                        <div class="modal-content">
-                                            <div class="modal-header bg-primary text-white">
-                                                <h5 class="modal-title" id="feedbackModalLabel{{ fb.pk }}">📋 Feedback Details</h5>
-                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p><strong>From:</strong>
-                                                    {% if fb.anonymous %}
-                                                        <span class="text-muted fst-italic">Anonymous</span>
-                                                    {% else %}
-                                                        {{ fb.from_user.get_full_name|default:fb.from_user.username }}
-                                                    {% endif %}
-                                                </p>
-                                                <p><strong>To:</strong> {{ fb.to_user.get_full_name|default:fb.to_user.username }}</p>
-                                                <p><strong>Category:</strong> {{ fb.get_category_display }}</p>
-                                                <p><strong>Message:</strong> {{ fb.message }}</p>
-                                                <p><strong>Sentiment:</strong>
-                                                    {% if fb.sentiment == "positive" %}
-                                                        <span class="badge bg-success">😊 Positive</span>
-                                                    {% elif fb.sentiment == "negative" %}
-                                                        <span class="badge bg-danger">☹️ Negative</span>
-                                                    {% else %}
-                                                        <span class="badge bg-secondary">😐 Neutral</span>
-                                                    {% endif %}
-                                                </p>
-                                                <p><strong>Status:</strong>
-                                                    {% if fb.status == "resolved" %}
-                                                        <span class="badge bg-success">Resolved</span>
-                                                    {% elif fb.status == "reviewed" %}
-                                                        <span class="badge bg-primary">Reviewed</span>
-                                                    {% else %}
-                                                        <span class="badge bg-warning text-dark">Open</span>
-                                                    {% endif %}
-                                                </p>
-                                                <p><strong>Response:</strong>
-                                                    {% if fb.response %}
-                                                        {{ fb.response }}
-                                                    {% else %}
-                                                        <span class="text-muted">No response yet.</span>
-                                                    {% endif %}
-                                                </p>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <!-- Feedback Modal -->
+                                    <div class="modal fade" id="feedbackModal{{ fb.pk }}" tabindex="-1" aria-labelledby="feedbackModalLabel{{ fb.pk }}" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg modal-dialog-centered">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-primary text-white">
+                                                    <h5 class="modal-title" id="feedbackModalLabel{{ fb.pk }}">📋 Feedback Details</h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p><strong>From:</strong>
+                                                        {% if fb.anonymous %}
+                                                            <span class="text-muted fst-italic">Anonymous</span>
+                                                        {% else %}
+                                                            {{ fb.from_user.get_full_name|default:fb.from_user.username }}
+                                                        {% endif %}
+                                                    </p>
+                                                    <p><strong>To:</strong> {{ fb.to_user.get_full_name|default:fb.to_user.username }}</p>
+                                                    <p><strong>Category:</strong> {{ fb.get_category_display }}</p>
+                                                    <p><strong>Message:</strong> {{ fb.message }}</p>
+                                                    <p><strong>Sentiment:</strong>
+                                                        {% if fb.sentiment == "positive" %}
+                                                            <span class="badge bg-success">😊 Positive</span>
+                                                        {% elif fb.sentiment == "negative" %} 
+                                                            <span class="badge bg-danger">☹️ Negative</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">😐 Neutral</span>
+                                                        {% endif %}
+                                                    </p>
+                                                    <p><strong>Status:</strong>
+                                                        {% if fb.status == "resolved" %}
+                                                            <span class="badge bg-success">Resolved</span>
+                                                        {% elif fb.status == "reviewed" %}
+                                                            <span class="badge bg-primary">Reviewed</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning text-dark">Open</span>
+                                                        {% endif %}
+                                                    </p>
+                                                    <p><strong>Response:</strong>
+                                                        {% if fb.response %}
+                                                            {{ fb.response }}
+                                                        {% else %}
+                                                            <span class="text-muted">No response yet.</span>
+                                                        {% endif %}
+                                                    </p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <!-- End Modal -->
+                                    <!-- End Modal -->
 
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-    {% else %}
-        <div class="alert alert-info shadow-sm rounded">
-            ℹ️ No feedback has been submitted yet.
-        </div>
-    {% endif %}
+        {% else %}
+            <div class="alert alert-info shadow-sm rounded">
+                ℹ️ No feedback has been submitted yet.
+            </div>
+        {% endif %}
+    </div>
 
     <!-- Surveys Section -->
-    <div class="card shadow-lg border-0 rounded-3">
-        <div class="card-body">
-            <h5>Your Surveys</h5>
-            {% if surveys %}
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-primary text-dark">
-                            <tr>
-                                <th>#</th>
-                                <th>Survey Title</th>
-                                <th>Description</th>
-                                <th class="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for survey in surveys %}
+    <div>
+        <h4 class="mb-3 text-secondary">📨 Surveys</h4>
+        <div class="card shadow-lg border-0 rounded-3">
+            <div class="card-body">
+                {% if surveys %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-primary text-dark">
                                 <tr>
-                                    <td>{{ forloop.counter }}</td>
-                                    <td>{{ survey.title }}</td>
-                                    <td>{{ survey.description|truncatewords:10 }}</td>
-                                    <td class="text-center">
-                                        <a href="{% url 'survey_detail' survey.pk %}" class="btn btn-info btn-sm">View</a>
-                                        {% if user.role|lower == "volunteer" %}
-                                            <a href="{% url 'submit_survey' survey.pk %}" class="btn btn-success btn-sm">Respond</a>
-                                        {% endif %}
-                                    </td>
+                                    <th>#</th>
+                                    <th>Survey Title</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Actions</th>
                                 </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div class="alert alert-info shadow-sm rounded">
-                    ℹ️ No surveys assigned to you.
-                </div>
-            {% endif %}
+                            </thead>
+                            <tbody>
+                                {% for survey in surveys %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>{{ survey.title }}</td>
+                                        <td>{{ survey.description|truncatewords:10 }}</td>
+                                        <td>
+                                            {% if survey.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Closed</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle shadow-sm"
+                                                        type="button"
+                                                        data-bs-toggle="dropdown"
+                                                        aria-expanded="false">
+                                                    ⚙ Actions
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <!-- View Modal -->
+                                                    <li>
+                                                        <a href="#" class="dropdown-item text-info"
+                                                           data-bs-toggle="modal"
+                                                           data-bs-target="#surveyModal{{ survey.pk }}">
+                                                            👁 View
+                                                        </a>
+                                                    </li>
+                                                    <!-- Volunteer Respond -->
+                                                    {% if user.role|lower == "volunteer" and survey.is_active %}
+                                                        <li>
+                                                            <a href="{% url 'feedback:submit_survey' survey.pk %}" class="dropdown-item text-success">
+                                                                📝 Respond
+                                                            </a>
+                                                        </li>
+                                                    {% endif %}
+                                                    <!-- Coordinator/Admin -->
+                                                    {% if user.role|lower in "coordinator admin" or user.is_staff %}
+                                                        <li>
+                                                            <a href="{% url 'feedback:survey_update' survey.pk %}" class="dropdown-item text-primary">
+                                                                ✏ Edit
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a href="{% url 'feedback:survey_delete' survey.pk %}" 
+                                                               class="dropdown-item text-danger"
+                                                               onclick="return confirm('Are you sure you want to delete this survey?');">
+                                                                🗑 Delete
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a href="{% url 'feedback:send_survey' %}?survey_id={{ survey.pk }}" class="dropdown-item text-warning">
+                                                                📤 Send
+                                                            </a>
+                                                        </li>
+                                                    {% endif %}
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Survey Modal -->
+                                    <div class="modal fade" id="surveyModal{{ survey.pk }}" tabindex="-1" aria-labelledby="surveyModalLabel{{ survey.pk }}" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-primary text-white">
+                                                    <h5 class="modal-title" id="surveyModalLabel{{ survey.pk }}">
+                                                        📊 {{ survey.title }}
+                                                    </h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p><strong>Description:</strong> {{ survey.description }}</p>
+                                                    <p><strong>Status:</strong> 
+                                                        {% if survey.is_active %}
+                                                            <span class="badge bg-success">Active</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">Closed</span>
+                                                        {% endif %}
+                                                    </p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    {% if user.role|lower == "volunteer" and survey.is_active %}
+                                                        <a href="{% url 'feedback:submit_survey' survey.pk %}" class="btn btn-success">
+                                                            📝 Respond
+                                                        </a>
+                                                    {% endif %}
+                                                    {% if user.role|lower in "coordinator admin" or user.is_staff %}
+                                                        <a href="{% url 'feedback:survey_update' survey.pk %}" class="btn btn-primary">✏ Edit</a>
+                                                        <a href="{% url 'feedback:survey_delete' survey.pk %}" 
+                                                           class="btn btn-danger"
+                                                           onclick="return confirm('Are you sure you want to delete this survey?');">
+                                                            🗑 Delete
+                                                        </a>
+                                                        <a href="{% url 'feedback:send_survey' %}?survey_id={{ survey.pk }}" class="btn btn-warning">
+                                                            📤 Send
+                                                        </a>
+                                                    {% endif %}
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">❌ Close</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- End Survey Modal -->
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info shadow-sm rounded">
+                        ℹ️ No surveys available.
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 

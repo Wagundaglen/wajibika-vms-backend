@@ -2,6 +2,7 @@
 
 {% block content %}
 <div class="container py-5">
+
   <!-- Survey Title & Info -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold">{{ survey.title }}</h2>
@@ -18,29 +19,36 @@
       <p class="small text-secondary mb-0">
         Created on: {{ survey.created_at|date:"M d, Y" }}
       </p>
+
       {% if is_admin_or_coordinator %}
-        <form action="{% url 'survey_delete' survey.pk %}" method="POST" style="display:inline;">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this survey?');">
-            Delete Survey
-          </button>
-        </form>
+        <div class="mt-3">
+          <a href="{% url 'survey_update' survey.pk %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil-square"></i> Edit Survey
+          </a>
+          <form action="{% url 'survey_delete' survey.pk %}" method="POST" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm"
+                    onclick="return confirm('Are you sure you want to delete this survey?');">
+              <i class="bi bi-trash"></i> Delete Survey
+            </button>
+          </form>
+        </div>
       {% endif %}
     </div>
   </div>
 
   <!-- Questions Section -->
   <div class="card shadow-lg border-0 rounded-3 mb-4">
-    <div class="card-header bg-info text-white">
+    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
       <h4 class="mb-0">📝 Survey Questions</h4>
       {% if is_admin_or_coordinator %}
-        <a href="{% url 'question_create' survey.pk %}" class="btn btn-light btn-sm float-end">
-          Add Question
+        <a href="{% url 'question_create' survey.pk %}" class="btn btn-light btn-sm">
+          <i class="bi bi-plus-circle"></i> Add Question
         </a>
       {% endif %}
     </div>
     <div class="card-body">
-      {% if survey.questions.count %}
+      {% if survey.questions.exists %}
         <div class="table-responsive">
           <table class="table table-striped table-hover align-middle">
             <thead class="table-light">
@@ -49,7 +57,7 @@
                 <th>Question</th>
                 <th>Type</th>
                 {% if is_admin_or_coordinator %}
-                  <th>Actions</th>
+                  <th class="text-center">Actions</th>
                 {% endif %}
               </tr>
             </thead>
@@ -60,15 +68,17 @@
                   <td>{{ question.text }}</td>
                   <td>{{ question.get_question_type_display }}</td>
                   {% if is_admin_or_coordinator %}
-                    <td>
+                    <td class="text-center">
                       <a href="{% url 'question_update' survey.pk question.pk %}" 
                          class="btn btn-outline-warning btn-sm">
-                        Edit
+                        <i class="bi bi-pencil"></i>
                       </a>
-                      <form action="{% url 'question_delete' survey.pk question.pk %}" method="POST" style="display:inline;">
+                      <form action="{% url 'question_delete' survey.pk question.pk %}" 
+                            method="POST" style="display:inline;">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this question?');">
-                          Delete
+                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                onclick="return confirm('Delete this question?');">
+                          <i class="bi bi-trash"></i>
                         </button>
                       </form>
                     </td>
@@ -79,53 +89,65 @@
           </table>
         </div>
       {% else %}
-        <div class="alert alert-info">
+        <div class="alert alert-info mb-0">
           No questions have been added yet.
         </div>
       {% endif %}
     </div>
   </div>
 
-  <!-- Responses Section -->
-  <div class="card shadow-lg border-0 rounded-3">
-    <div class="card-header bg-primary text-white">
-      <h4 class="mb-0">📊 Survey Responses ({{ responses.count }})</h4>
+  <!-- Volunteer Action -->
+  {% if not is_admin_or_coordinator %}
+    <div class="text-center mt-4">
+      <a href="{% url 'submit_survey' survey.pk %}" class="btn btn-success btn-lg">
+        <i class="bi bi-pencil-square"></i> Fill Out Survey
+      </a>
     </div>
-    <div class="card-body p-4">
-      {% if responses %}
-        <div class="table-responsive">
-          <table class="table table-striped table-hover align-middle">
-            <thead class="table-light">
-              <tr>
-                <th>#</th>
-                <th>Respondent</th>
-                <th>Submitted At</th>
-                <th>Response</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for response in responses %}
+  {% endif %}
+
+  <!-- Responses Section (Admin Only) -->
+  {% if is_admin_or_coordinator %}
+    <div class="card shadow-lg border-0 rounded-3 mt-4">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">📊 Survey Responses ({{ responses.count }})</h4>
+      </div>
+      <div class="card-body p-4">
+        {% if responses %}
+          <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+              <thead class="table-light">
                 <tr>
-                  <td>{{ forloop.counter }}</td>
-                  <td>{{ response.user.username }}</td>
-                  <td>{{ response.created_at|date:"M d, Y H:i" }}</td>
-                  <td>
-                    <a href="{% url 'survey_response_detail' response.pk %}" 
-                       class="btn btn-outline-primary btn-sm">
-                      View Response
-                    </a>
-                  </td>
+                  <th>#</th>
+                  <th>Respondent</th>
+                  <th>Submitted At</th>
+                  <th>Actions</th>
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <div class="alert alert-info">
-          No responses have been submitted yet.
-        </div>
-      {% endif %}
+              </thead>
+              <tbody>
+                {% for response in responses %}
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ response.user.username }}</td>
+                    <td>{{ response.created_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                      <a href="{% url 'survey_response_detail' response.pk %}" 
+                         class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-eye"></i> View
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="alert alert-info mb-0">
+            No responses have been submitted yet.
+          </div>
+        {% endif %}
+      </div>
     </div>
-  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

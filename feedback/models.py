@@ -4,6 +4,7 @@ from django.utils import timezone
 
 User = settings.AUTH_USER_MODEL
 
+
 # -------------------------------------------------
 # VOLUNTEER MODEL
 # -------------------------------------------------
@@ -14,6 +15,7 @@ class Volunteer(models.Model):
 
     def __str__(self):
         return self.full_name
+
 
 # -------------------------------------------------
 # FEEDBACK MODEL
@@ -79,6 +81,7 @@ class Feedback(models.Model):
 
     message = models.TextField()
 
+    # Quick single reply
     response = models.TextField(
         blank=True, null=True,
         help_text="Coordinator/Admin reply to the volunteer"
@@ -148,6 +151,27 @@ class Feedback(models.Model):
 
 
 # -------------------------------------------------
+# FEEDBACK RESPONSE MODEL
+# -------------------------------------------------
+class FeedbackResponse(models.Model):
+    feedback = models.ForeignKey(
+        Feedback,
+        on_delete=models.CASCADE,
+        related_name="responses"
+    )
+    responded_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="feedback_responses"
+    )
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Response by {self.responded_by} on {self.feedback}"
+
+
+# -------------------------------------------------
 # SURVEY MODEL
 # -------------------------------------------------
 class Survey(models.Model):
@@ -193,7 +217,7 @@ class Question(models.Model):
     question_type = models.CharField(max_length=50, choices=[
         ('text', 'Text'),
         ('multiple_choice', 'Multiple Choice'),
-        # Add more question types if needed
+        ('rating', 'Rating (1–5)'),
     ])
     required = models.BooleanField(default=False)
 
@@ -220,7 +244,7 @@ class SurveyResponse(models.Model):
         Survey,
         on_delete=models.CASCADE,
         related_name="responses",
-        null=True, blank=True
+        default=1,
     )
 
     user = models.ForeignKey(
@@ -237,29 +261,30 @@ class SurveyResponse(models.Model):
         help_text="Coordinator/Admin who assigned the survey"
     )
 
-    q1 = models.TextField("What did you enjoy most about the program?", blank=True, null=True)
-    q2 = models.TextField("What could we improve?", blank=True, null=True)
-
-    rating = models.IntegerField(
-        "Overall rating (1–5)",
-        choices=[(i, str(i)) for i in range(1, 6)],
-        null=True, blank=True,
-        help_text="Optional rating: 1–5 = actual rating"
-    )
-
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='pending'
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(auto_now_add=True)  # ✅ timestamp added
 
     def __str__(self):
-        survey_title = self.survey.title if self.survey else 'No Survey'
-        return f"{self.user} → {survey_title} ({self.status})"
+        return f"{self.user} → {self.survey.title} ({self.status})"
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-submitted_at']
         verbose_name = "Survey Response"
         verbose_name_plural = "Survey Responses"
+
+
+# -------------------------------------------------
+# SURVEY ANSWER MODEL
+# -------------------------------------------------
+class SurveyAnswer(models.Model):
+    response = models.ForeignKey(SurveyResponse, on_delete=models.CASCADE, related_name="answers")
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    answer_text = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.response.user} - {self.question.text}"

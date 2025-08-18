@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import Feedback, Survey, Question, SurveyResponse
 
+
 # -------------------------------------------------
 # Feedback Admin
 # -------------------------------------------------
@@ -55,6 +56,7 @@ class FeedbackAdmin(admin.ModelAdmin):
         )
     sentiment_colored.short_description = "Sentiment (Colored)"
 
+
 # -------------------------------------------------
 # Survey Admin
 # -------------------------------------------------
@@ -66,6 +68,7 @@ class SurveyAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
     date_hierarchy = 'created_at'
 
+
 # -------------------------------------------------
 # Question Admin
 # -------------------------------------------------
@@ -76,13 +79,14 @@ class QuestionAdmin(admin.ModelAdmin):
     search_fields = ('text',)
     ordering = ('id',)
 
+
 # -------------------------------------------------
 # Survey Response Admin
 # -------------------------------------------------
 @admin.register(SurveyResponse)
 class SurveyResponseAdmin(admin.ModelAdmin):
-    list_display = ('user', 'survey', 'status', 'created_at')
-    list_filter = ('status', 'survey')
+    list_display = ('user', 'survey', 'status', 'submitted_at')  # ✅ fixed
+    list_filter = ('status', 'survey', 'submitted_at')           # ✅ fixed
     search_fields = ('user__username', 'survey__title')
-    ordering = ('-created_at',)
-    date_hierarchy = 'created_at'
+    ordering = ('-submitted_at',)                                # ✅ fixed
+    date_hierarchy = 'submitted_at'                              # ✅ fixed

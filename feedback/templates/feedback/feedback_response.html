@@ -1,59 +1,26 @@
 {% extends "base.html" %}
-
-{% block title %}Respond to Feedback{% endblock %}
+{% load crispy_forms_tags %}
 
 {% block content %}
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
+<div class="container mt-4">
+    <h2>Respond to Feedback</h2>
 
-            <!-- Feedback Response Card -->
-            <div class="card border-0 shadow-lg rounded-3">
-                <div class="card-body p-4">
-
-                    <!-- Heading -->
-                    <h3 class="fw-bold text-success mb-4">
-                        <i class="bi bi-reply-fill"></i> Respond to Feedback
-                    </h3>
-
-                    <!-- Feedback Details (Yellow Sticky Note Style) -->
-                    <div class="p-3 mb-4 rounded" style="background-color: #fff3cd; border-left: 5px solid #ffc107;">
-                        <p>
-                            <i class="bi bi-person-circle text-dark me-2"></i>
-                            <strong>From:</strong> {{ object.from_user|default:"Anonymous" }}
-                        </p>
-                        <p>
-                            <i class="bi bi-tags-fill text-dark me-2"></i>
-                            <strong>Category:</strong> {{ object.category }}
-                        </p>
-                        <p class="mb-0">
-                            <i class="bi bi-chat-left-text-fill text-dark me-2"></i>
-                            <strong>Message:</strong> {{ object.message }}
-                        </p>
-                    </div>
-
-                    <!-- Response Form -->
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            {{ form.as_p }}
-                        </div>
-
-                        <!-- Action Buttons (Spaced Out) -->
-                        <div class="d-flex justify-content-between align-items-center mt-4">
-                            <a href="{% url 'feedback_dashboard' %}" class="btn btn-outline-secondary px-4">
-                                <i class="bi bi-arrow-left-circle"></i> Cancel
-                            </a>
-                            <button type="submit" class="btn btn-success px-4">
-                                <i class="bi bi-check-circle-fill"></i> Save Response
-                            </button>
-                        </div>
-                    </form>
-
-                </div>
-            </div>
-
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">{{ feedback.title }}</h5>
+            <p class="card-text">{{ feedback.message }}</p>
+            <p class="text-muted">
+                Submitted by: {{ feedback.submitted_by.get_full_name|default:feedback.submitted_by.username }}
+                on {{ feedback.created_at|date:"M d, Y H:i" }}
+            </p>
         </div>
     </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary">Submit Response</button>
+        <a href="{% url 'feedback:feedback_detail' feedback.id %}" class="btn btn-secondary">Cancel</a>
+    </form>
 </div>
 {% endblock %}
