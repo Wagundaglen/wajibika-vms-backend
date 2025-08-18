@@ -6,7 +6,7 @@
   <!-- Survey Title & Info -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold">{{ survey.title }}</h2>
-    <a href="{% url 'survey_list' %}" class="btn btn-secondary">
+    <a href="{% url 'feedback:survey_list' %}" class="btn btn-secondary">
       <i class="bi bi-arrow-left"></i> Back to Surveys
     </a>
   </div>
@@ -99,7 +99,7 @@
   <!-- Volunteer Action -->
   {% if not is_admin_or_coordinator %}
     <div class="text-center mt-4">
-      <a href="{% url 'submit_survey' survey.pk %}" class="btn btn-success btn-lg">
+      <a href="{% url 'feedback:submit_survey' survey.pk %}" class="btn btn-success btn-lg">
         <i class="bi bi-pencil-square"></i> Fill Out Survey
       </a>
     </div>

@@ -168,15 +168,28 @@ class QuestionForm(forms.ModelForm):
 # ======================================================
 # SEND SURVEY FORM (NEW)
 # ======================================================
+
+SEND_TO_CHOICES = [
+    ("all", "All Volunteers"),
+    ("specific", "Specific Volunteers"),
+]
+
 class SendSurveyForm(forms.Form):
     survey = forms.ModelChoiceField(
         queryset=Survey.objects.all(),
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        label="Select Survey"
+        label="Survey",
+        widget=forms.Select(attrs={"class": "form-select"})
     )
+
+    send_to = forms.ChoiceField(
+        choices=SEND_TO_CHOICES,
+        widget=forms.RadioSelect,
+        label="Send To"
+    )
+
     volunteers = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(is_staff=False),  # Only volunteers
+        queryset=User.objects.filter(role="Volunteer"),
         required=False,
-        widget=forms.SelectMultiple(attrs={'class': 'form-select'}),
-        label="Select Specific Volunteers (leave empty for all)"
+        label="Volunteers",
+        widget=forms.SelectMultiple(attrs={"class": "form-select"})
     )

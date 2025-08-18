@@ -1,3 +1,4 @@
+from datetime import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import (
     CreateView, ListView, UpdateView, DetailView, DeleteView, TemplateView
@@ -11,6 +12,7 @@ from django.http import HttpResponseForbidden
 from .models import Feedback, FeedbackResponse, Survey, Question, SurveyResponse
 from .forms import FeedbackForm, FeedbackResponseForm, SurveyForm, QuestionForm, SendSurveyForm
 from django.contrib.auth import get_user_model
+from .models import Volunteer
 
 User = get_user_model()
 
@@ -226,6 +228,15 @@ class SurveyDetailView(DetailView):
     template_name = "feedback/survey_detail.html"
     context_object_name = "survey"
 
+@method_decorator(login_required, name="dispatch")
+class SurveyResponseDetailView(DetailView):
+    model = SurveyResponse
+    template_name = "feedback/survey_response_detail.html"
+    context_object_name = "response"
+
+@method_decorator(login_required, name="dispatch")
+class SurveyThanksView(TemplateView):
+    template_name = "feedback/survey_thanks.html"
 
 @method_decorator(login_required, name="dispatch")
 class SurveyUpdateView(UpdateView):
@@ -313,29 +324,43 @@ class QuestionDeleteView(DeleteView):
 # -------------------------------------------------
 @login_required
 def send_survey(request):
-    if not is_admin_or_coordinator(request.user):
-        return HttpResponseForbidden("Not allowed to send surveys.")
-
     if request.method == "POST":
         form = SendSurveyForm(request.POST)
         if form.is_valid():
-            survey = form.cleaned_data['survey']
-            selected_volunteers = form.cleaned_data['volunteers']
+            survey = form.cleaned_data["survey"]
+            send_to = request.POST.get("send_to")
+            selected_volunteers = form.cleaned_data["volunteers"]
 
-            volunteers = selected_volunteers if selected_volunteers else User.objects.filter(is_staff=False)
+            # Decide recipients
+            if send_to == "all":
+                volunteers = User.objects.filter(role="Volunteer")
+            else:
+                volunteers = selected_volunteers
 
-            sent_count = 0
-            for v in volunteers:
-                if not SurveyResponse.objects.filter(user=v, survey=survey).exists():
-                    SurveyResponse.objects.create(user=v, survey=survey, answers={})
-                    sent_count += 1
+            count = 0
+            for volunteer in volunteers:
+                # Assign to ManyToMany field
+                if volunteer not in survey.assigned_users.all():
+                    survey.assigned_users.add(volunteer)
 
-            messages.success(request, f"Survey '{survey.title}' sent to {sent_count} volunteers.")
+                    # Also create a SurveyResponse tracker
+                    SurveyResponse.objects.get_or_create(
+                        survey=survey,
+                        user=volunteer,
+                        defaults={"assigned_by": request.user}
+                    )
+                    count += 1
+
+            messages.success(
+                request,
+                f"Survey '{survey.title}' sent to {count} volunteers."
+            )
             return redirect("feedback:survey_list")
     else:
         form = SendSurveyForm()
 
     return render(request, "feedback/send_survey.html", {"form": form})
+
 
 
 # -------------------------------------------------
@@ -345,31 +370,33 @@ def send_survey(request):
 def submit_survey(request, pk):
     survey = get_object_or_404(Survey, pk=pk)
 
-    # Ensure the volunteer has been assigned
+    # 🚫 Block Admins and Coordinators from submitting
+    if is_admin_or_coordinator(request.user):
+        messages.warning(request, "Admins and Coordinators cannot submit surveys. You may only view results.")
+        return redirect("feedback:survey_detail", pk=survey.pk)
+
+    # ✅ Ensure volunteer is assigned this survey
     survey_response = SurveyResponse.objects.filter(user=request.user, survey=survey).first()
     if not survey_response:
         return HttpResponseForbidden("You were not assigned this survey.")
 
     if request.method == "POST":
-        answers = {}
-        for q in survey.questions.all():
-            answers[str(q.id)] = request.POST.get(f"question_{q.id}", "")
+        # Delete old answers if re-submitting
+        survey_response.answers.all().delete()
 
-        survey_response.answers = answers
+        # Save answers
+        for q in survey.questions.all():
+            answer_text = request.POST.get(f"question_{q.id}", "").strip()
+            if answer_text:  # Save only if answered
+                survey_response.answers.create(
+                    question=q,
+                    answer_text=answer_text
+                )
+
+        survey_response.submitted_at = timezone.now()
         survey_response.save()
+
         messages.success(request, "Survey submitted successfully!")
         return redirect("feedback:survey_thanks")
 
     return render(request, "feedback/survey_submit.html", {"survey": survey})
-
-
-@method_decorator(login_required, name="dispatch")
-class SurveyThanksView(TemplateView):
-    template_name = "feedback/survey_thanks.html"
-
-
-@method_decorator(login_required, name="dispatch")
-class SurveyResponseDetailView(DetailView):
-    model = SurveyResponse
-    template_name = "feedback/survey_response_detail.html"
-    context_object_name = "response"

@@ -25,6 +25,7 @@
     <div class="mb-3" id="volunteers_div" style="display: none;">
         <label for="id_volunteers" class="form-label">Select Volunteers:</label>
         {{ form.volunteers }}
+        <small class="form-text text-muted">Hold Ctrl (Windows) or Command (Mac) to select multiple volunteers.</small>
     </div>
 
     <button type="submit" class="btn btn-primary">Send Survey</button>
@@ -36,11 +37,7 @@
     const volunteersDiv = document.getElementById('volunteers_div');
 
     function toggleVolunteers() {
-        if (sendSpecificRadio.checked) {
-            volunteersDiv.style.display = 'block';
-        } else {
-            volunteersDiv.style.display = 'none';
-        }
+        volunteersDiv.style.display = sendSpecificRadio.checked ? 'block' : 'none';
     }
 
     sendAllRadio.addEventListener('change', toggleVolunteers);
