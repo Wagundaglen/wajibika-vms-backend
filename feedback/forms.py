@@ -166,7 +166,7 @@ class QuestionForm(forms.ModelForm):
 
 
 # ======================================================
-# SEND SURVEY FORM (NEW)
+# SEND SURVEY FORM (UPDATED)
 # ======================================================
 
 SEND_TO_CHOICES = [
@@ -190,6 +190,6 @@ class SendSurveyForm(forms.Form):
     volunteers = forms.ModelMultipleChoiceField(
         queryset=User.objects.filter(role="Volunteer"),
         required=False,
-        label="Volunteers",
+        label="Select Volunteers",
         widget=forms.SelectMultiple(attrs={"class": "form-select"})
     )

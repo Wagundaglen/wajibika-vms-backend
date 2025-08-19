@@ -64,15 +64,27 @@ class Feedback(models.Model):
         help_text="If reassigned, this staff member will handle the feedback."
     )
 
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='general')
-    sentiment = models.CharField(max_length=10, choices=SENTIMENT_CHOICES, blank=True, null=True)
+    category = models.CharField(
+        max_length=50, choices=CATEGORY_CHOICES, default='general'
+    )
+    sentiment = models.CharField(
+        max_length=10, choices=SENTIMENT_CHOICES, blank=True, null=True
+    )
 
     message = models.TextField()
-    response = models.TextField(blank=True, null=True, help_text="Coordinator/Admin reply to the volunteer")
+    response = models.TextField(
+        blank=True, null=True,
+        help_text="Coordinator/Admin reply to the volunteer"
+    )
 
-    anonymous = models.BooleanField(default=False, help_text="If checked, sender’s identity will be hidden.")
+    anonymous = models.BooleanField(
+        default=False,
+        help_text="If checked, sender’s identity will be hidden."
+    )
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='open'
+    )
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -87,13 +99,16 @@ class Feedback(models.Model):
     survey_sent = models.BooleanField(default=False)
 
     def display_sender(self):
+        """Return sender name or 'Anonymous'/'Unknown' if hidden/missing."""
         if self.anonymous:
             return "Anonymous"
         if self.from_user:
-            return getattr(self.from_user, "get_full_name", lambda: "")() or getattr(self.from_user, "username", None)
+            return getattr(self.from_user, "get_full_name", lambda: "")() \
+                   or getattr(self.from_user, "username", None)
         return "Unknown"
 
     def mark_resolved(self, user=None):
+        """Mark feedback as resolved and set resolution details."""
         self.status = 'resolved'
         self.resolved_at = timezone.now()
         if user:
@@ -109,8 +124,12 @@ class Feedback(models.Model):
 
 
 class FeedbackResponse(models.Model):
-    feedback = models.ForeignKey(Feedback, on_delete=models.CASCADE, related_name="responses")
-    responded_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="feedback_responses")
+    feedback = models.ForeignKey(
+        Feedback, on_delete=models.CASCADE, related_name="responses"
+    )
+    responded_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="feedback_responses"
+    )
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -130,13 +149,17 @@ class Survey(models.Model):
     end_date = models.DateTimeField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
 
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="created_surveys")
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="created_surveys"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
-    assigned_users = models.ManyToManyField(User, related_name="assigned_surveys", blank=True)
+    assigned_users = models.ManyToManyField(
+        User, related_name="assigned_surveys", blank=True
+    )
 
     def __str__(self):
-        return f"{self.title}"
+        return self.title
 
 
 class Question(models.Model):
@@ -146,7 +169,9 @@ class Question(models.Model):
         ('rating', 'Rating (1–5)'),
     ]
 
-    survey = models.ForeignKey(Survey, related_name='questions', on_delete=models.CASCADE)
+    survey = models.ForeignKey(
+        Survey, related_name='questions', on_delete=models.CASCADE
+    )
     text = models.CharField(max_length=300)
     question_type = models.CharField(max_length=50, choices=QUESTION_TYPES)
     required = models.BooleanField(default=False)
@@ -162,11 +187,21 @@ class SurveyResponse(models.Model):
         ('reviewed', 'Reviewed'),
     ]
 
-    survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name="responses")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="survey_responses")
-    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="survey_assignments")
+    survey = models.ForeignKey(
+        Survey, on_delete=models.CASCADE, related_name="responses"
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="survey_responses"
+    )
+    assigned_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="survey_assignments"
+    )
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='pending'
+    )
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -174,7 +209,9 @@ class SurveyResponse(models.Model):
 
 
 class SurveyAnswer(models.Model):
-    response = models.ForeignKey(SurveyResponse, on_delete=models.CASCADE, related_name="answers")
+    response = models.ForeignKey(
+        SurveyResponse, on_delete=models.CASCADE, related_name="answers"
+    )
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     answer_text = models.TextField(blank=True, null=True)
 

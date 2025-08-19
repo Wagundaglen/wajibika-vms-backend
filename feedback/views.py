@@ -13,6 +13,7 @@ from .models import Feedback, FeedbackResponse, Survey, Question, SurveyResponse
 from .forms import FeedbackForm, FeedbackResponseForm, SurveyForm, QuestionForm, SendSurveyForm
 from django.contrib.auth import get_user_model
 from .models import Volunteer
+from accounts.models import Volunteer
 
 User = get_user_model()
 

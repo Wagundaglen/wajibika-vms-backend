@@ -31,7 +31,6 @@ urlpatterns = [
 
     # Modules (protected)
     path('modules/tasks/', login_required(views.tasks_module), name='tasks_module'),
-    path('modules/recognition/', login_required(views.recognition_module), name='recognition_module'),
     path('modules/communication/', login_required(views.communication_module), name='communication_module'),
     path('modules/training/', login_required(views.training_module), name='training_module'),
 

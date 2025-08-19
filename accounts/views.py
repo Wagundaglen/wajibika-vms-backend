@@ -235,9 +235,6 @@ def reject_task(request, task_id):
     return redirect("tasks_module")
 
 # ---------- Other Modules ----------
-@login_required
-def recognition_module(request):
-    return render(request, "modules/recognition.html")
 
 @login_required
 def communication_module(request):
