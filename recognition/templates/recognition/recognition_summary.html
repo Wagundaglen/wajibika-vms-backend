@@ -1,0 +1,62 @@
+<div class="recognition-summary">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Recognition Summary</h5>
+        <a href="{% url 'recognition:dashboard' %}" class="btn btn-sm btn-outline-primary">View Full</a>
+    </div>
+    
+    <div class="row g-2 mb-3">
+        <div class="col-4">
+            <div class="card bg-primary text-white text-center p-2">
+                <div class="h5 mb-0">{{ total_points }}</div>
+                <small>Points</small>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card bg-success text-white text-center p-2">
+                <div class="h5 mb-0">{{ user_badges|length }}</div>
+                <small>Badges</small>
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="card bg-info text-white text-center p-2">
+                <div class="h5 mb-0">#{{ user_rank|default:"N/A" }}</div>
+                <small>Rank</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mb-3">
+        <h6>Recent Badges</h6>
+        <div class="d-flex flex-wrap">
+            {% for badge in user_badges|slice:":5" %}
+                <span class="badge bg-primary me-1 mb-1">{{ badge.name }}</span>
+            {% empty %}
+                <p class="text-muted small">No badges earned yet</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div>
+        <h6>Recent Recognitions</h6>
+        <div class="list-group list-group-flush">
+            {% for recognition in recent_recognitions|slice:":3" %}
+                <div class="list-group-item px-0">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ recognition.badge.name|default:"Recognition" }}</strong>
+                        <span class="badge bg-success">+{{ recognition.points }}</span>
+                    </div>
+                    <small class="text-muted">{{ recognition.message|truncatewords:10 }}</small>
+                </div>
+            {% empty %}
+                <p class="text-muted small">No recent recognitions</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.recognition-summary .card {
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+</style>

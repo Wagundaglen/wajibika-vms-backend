@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Admin Dashboard{% endblock %}
 {% block content %}
-
 <div class="container my-5">
     <h1 class="mb-4 text-success">Admin Dashboard</h1>
     <div class="row g-4">
@@ -42,18 +41,45 @@
             </div>
         </div>
         
-        <!-- Recognition Management -->
-        <div class="col-md-4">
-            <div class="card shadow border-0 h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-award-fill display-4 text-danger"></i>
-                    <h5 class="mt-3">Recognition</h5>
-                    <p>Approve nominations and manage award criteria.</p>
-                    <a href="{% url 'recognition:recognition_dashboard' %}" class="btn btn-outline-danger">Go</a>
+        <!-- Recognition System -->
+        <div class="col-md-12">
+            <div class="card shadow border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Recognition System Overview</h5>
+                        <div>
+                            <a href="{% url 'recognition:dashboard' %}" class="btn btn-sm btn-primary">Manage Recognition</a>
+                            <a href="/admin/recognition/" class="btn btn-sm btn-secondary">Admin Models</a>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            {% include "recognition/_recognition_widget.html" %}
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Quick Actions</h6>
+                                    <div class="d-grid gap-2">
+                                        <a href="/admin/recognition/badge/add/" class="btn btn-outline-success btn-sm">Create Badge</a>
+                                        <a href="/admin/recognition/recognition/add/" class="btn btn-outline-primary btn-sm">Give Recognition</a>
+                                        <a href="/admin/recognition/team/add/" class="btn btn-outline-info btn-sm">Create Team</a>
+                                        <a href="#" class="btn btn-outline-warning btn-sm" onclick="updateLeaderboards()">Update Leaderboards</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        
+
+        <!-- Recognition Widget -->
+        <div class="col-md-12">
+            {% include "recognition/_recognition_widget.html" %}
+        </div>
+
         <!-- Feedback Management -->
         <div class="col-md-4">
             <div class="card shadow border-0 h-100">
@@ -81,4 +107,18 @@
     </div>
 </div>
 
+<script>
+function updateLeaderboards() {
+    fetch('/admin/recognition/leaderboard/')
+        .then(response => response.json())
+        .then(data => {
+            alert('Leaderboards updated successfully!');
+            location.reload();
+        })
+        .catch(error => {
+            console.error('Error updating leaderboards:', error);
+            alert('Error updating leaderboards. Please try again.');
+        });
+}
+</script>
 {% endblock %}

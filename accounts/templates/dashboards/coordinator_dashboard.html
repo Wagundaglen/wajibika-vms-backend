@@ -31,29 +31,32 @@
         </div>
 
 
-        <!-- Recognition -->
-        <div class="col-md-4">
-            <div class="card shadow border-0 h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-award-fill display-4 text-danger"></i>
-                    <h5 class="mt-3">Recognition</h5>
-                    <p>Nominate volunteers and view leaderboards.</p>
-                    <a href="{% url 'recognition:recognition_dashboard' %}" class="btn btn-outline-danger">Go</a>
-                </div>
+        <!-- Recognition section -->
+        <div class="dashboard-section">
+            <h2>Team Recognition</h2>
+            {% include "recognition/_recognition_widget.html" %}
+            <div class="coordinator-actions">
+            <a href="{% url 'recognition:dashboard' %}" class="btn btn-primary">View Recognition Dashboard</a>
+            <a href="/admin/recognition/recognition/add/" class="btn btn-success">Give Recognition</a>
             </div>
+        </div>
+        
+        <!-- Recognition Widget -->
+        <div class="col-md-12">
+            {% include "recognition/_recognition_widget.html" %}
         </div>
 
         <!-- Feedback Collection -->
         <div class="col-lg-3 col-md-4 col-sm-6">
-             <div class="card shadow border-0 h-100">
+            <div class="card shadow border-0 h-100">
                 <div class="card-body text-center">
-            <i class="bi bi-ui-checks-grid display-4 text-secondary"></i>
-            <h5 class="mt-3">Feedback Collection</h5>
-            <p>Send surveys and review volunteer feedback.</p>
+                    <i class="bi bi-ui-checks-grid display-4 text-secondary"></i>
+                    <h5 class="mt-3">Feedback Collection</h5>
+                <p>Send surveys and review volunteer feedback.</p>
             <a href="{% url 'feedback:feedback_dashboard' %}" class="btn btn-outline-secondary">Go</a>
         </div>
     </div>
-    </div>
+</div>
 
 
         <!-- Communication -->

@@ -1,73 +1,118 @@
-import os
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import inch
-from reportlab.pdfgen import canvas
-from reportlab.lib import colors
-from django.conf import settings
 from django.utils import timezone
-from .models import Certificate
+from datetime import timedelta
+from .models import Leaderboard, Team, Recognition
+from django.db.models import Sum
+from django.db import transaction
 
-
-def generate_certificate(volunteer, title="Certificate of Achievement"):
+def update_leaderboard(timeframe='all_time', team=None, verbose=False):
     """
-    Generate a styled PDF certificate for a volunteer and save it in DB.
+    Update leaderboard for specified timeframe and team.
+    
+    Args:
+        timeframe (str): 'weekly', 'monthly', or 'all_time'
+        team (Team): Team object or None for system-wide
+        verbose (bool): Print detailed output
+    
+    Returns:
+        dict: Result information including success status and counts
     """
+    result = {
+        'success': False,
+        'timeframe': timeframe,
+        'team': team.name if team else 'System-wide',
+        'deleted': 0,
+        'created': 0,
+        'error': None
+    }
+    
+    try:
+        # Calculate date range based on timeframe
+        now = timezone.now()
+        if timeframe == 'weekly':
+            start_date = now - timedelta(days=7)
+        elif timeframe == 'monthly':
+            start_date = now - timedelta(days=30)
+        else:
+            start_date = None
+        
+        # Filter recognitions
+        recognitions = Recognition.objects.all()
+        if start_date:
+            recognitions = recognitions.filter(created_at__gte=start_date)
+        if team:
+            recognitions = recognitions.filter(team=team)
+        
+        # Calculate points for each volunteer
+        volunteer_points = recognitions.values('volunteer').annotate(
+            total_points=Sum('points')
+        ).order_by('-total_points')
+        
+        # Use transaction to ensure atomicity
+        with transaction.atomic():
+            # Clear existing leaderboard entries
+            deleted_count, _ = Leaderboard.objects.filter(
+                timeframe=timeframe, 
+                team=team
+            ).delete()
+            
+            # Create new leaderboard entries
+            created_count = 0
+            for rank, entry in enumerate(volunteer_points, 1):
+                Leaderboard.objects.create(
+                    volunteer_id=entry['volunteer'],
+                    points=entry['total_points'] or 0,
+                    rank=rank,
+                    timeframe=timeframe,
+                    team=team
+                )
+                created_count += 1
+        
+        result.update({
+            'success': True,
+            'deleted': deleted_count,
+            'created': created_count
+        })
+        
+        if verbose:
+            print(f"Updated {timeframe} leaderboard for {result['team']}: Deleted {deleted_count}, Created {created_count}")
+        
+    except Exception as e:
+        result['error'] = str(e)
+        if verbose:
+            print(f"Error updating {timeframe} leaderboard for {result['team']}: {str(e)}")
+    
+    return result
 
-    # --- File setup ---
-    filename = f"{volunteer.user.username}_{timezone.now().strftime('%Y%m%d%H%M%S')}.pdf"
-    directory = os.path.join(settings.MEDIA_ROOT, "certificates")
-    file_path = os.path.join(directory, filename)
-
-    os.makedirs(directory, exist_ok=True)
-
-    # --- Create PDF canvas ---
-    c = canvas.Canvas(file_path, pagesize=A4)
-    width, height = A4
-
-    # --- Border ---
-    margin = 30
-    c.setStrokeColor(colors.black)
-    c.setLineWidth(4)
-    c.rect(margin, margin, width - 2*margin, height - 2*margin)
-
-    # --- Header ---
-    c.setFont("Helvetica-Bold", 28)
-    c.drawCentredString(width/2, height - 1.5*inch, "Wajibika Initiative")
-
-    c.setFont("Helvetica-Bold", 22)
-    c.drawCentredString(width/2, height - 2.5*inch, title)
-
-    # --- Recipient ---
-    c.setFont("Helvetica", 16)
-    c.drawCentredString(width/2, height - 3.5*inch, "This certificate is proudly presented to")
-
-    c.setFont("Helvetica-Bold", 24)
-    c.drawCentredString(width/2, height - 4.5*inch,
-                        volunteer.user.get_full_name() or volunteer.user.username)
-
-    # --- Reason ---
-    c.setFont("Helvetica", 14)
-    c.drawCentredString(width/2, height - 5.5*inch,
-                        "For outstanding contributions and dedication.")
-
-    # --- Date & signature ---
-    issue_date = timezone.now().strftime("%d %B %Y")
-    c.setFont("Helvetica-Oblique", 12)
-    c.drawString(1.5*inch, 1.5*inch, f"Issued on {issue_date}")
-
-    c.line(width - 3.5*inch, 1.5*inch, width - 1.5*inch, 1.5*inch)
-    c.setFont("Helvetica", 10)
-    c.drawString(width - 3.3*inch, 1.2*inch, "Authorised Signature")
-
-    # --- Finalise ---
-    c.showPage()
-    c.save()
-
-    # --- Save record in DB ---
-    cert = Certificate.objects.create(
-        volunteer=volunteer,
-        title=title,
-        file=f"certificates/{filename}"
-    )
-
-    return cert
+def update_all_leaderboards(verbose=False):
+    """
+    Update all leaderboards for all timeframes and teams.
+    
+    Args:
+        verbose (bool): Print detailed output
+    
+    Returns:
+        dict: Summary of all updates
+    """
+    summary = {
+        'total_updates': 0,
+        'errors': [],
+        'results': []
+    }
+    
+    # Get all teams
+    teams = Team.objects.all()
+    teams = list(teams) + [None]  # Include None for system-wide
+    
+    timeframes = ['weekly', 'monthly', 'all_time']
+    
+    for team in teams:
+        for timeframe in timeframes:
+            result = update_leaderboard(timeframe, team, verbose)
+            summary['results'].append(result)
+            
+            if result['success']:
+                summary['total_updates'] += 1
+            else:
+                summary['errors'].append(result['error'])
+    
+    return summary

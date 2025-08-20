@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'communication',
     'training',
     'feedback',
-    'recognition.apps.RecognitionConfig',
+    'recognition'
+
 ]
 
 # Crispy Forms settings
@@ -72,6 +73,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'communication.context_processors.unread_counts',
+                'recognition.context_processors.recognition_data',
 
             ],
         },
@@ -84,7 +86,7 @@ WSGI_APPLICATION = 'vms.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'wajibika_vms',
+        'NAME': 'wajibika_vms_db',
         'USER': 'postgres',
         'PASSWORD': 'glen1234',
         'HOST': 'localhost',

@@ -20,7 +20,7 @@ urlpatterns = [
     path('training/', include('training.urls')),
     path('feedback/', include('feedback.urls')),
     path('recognition/', include('recognition.urls')),
-    
+
 ]
 
 # Serve media and static in development

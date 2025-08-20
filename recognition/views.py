@@ -1,125 +1,66 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from django.http import FileResponse, Http404
-from django.conf import settings
-from django.db import models
-import os
-
-from accounts.models import Volunteer
-from .models import Recognition
-from .utils import generate_certificate
-
-
-# ========= Role Checks =========
-def is_admin(user):
-    return user.is_authenticated and user.role == "Admin"
-
-def is_coordinator(user):
-    return user.is_authenticated and user.role == "Coordinator"
-
-def is_volunteer(user):
-    return user.is_authenticated and user.role == "Volunteer"
-
-
-# ========= Volunteer Views =========
-@login_required
-@user_passes_test(is_volunteer)
-def recognition(request):
-    """Volunteer: View all their earned recognitions and certificates."""
-    recognitions = Recognition.objects.filter(volunteer=request.user).order_by("-created_at")
-    return render(request, "recognition/volunteer_recognition.html", {
-        "recognitions": recognitions
-    })
-
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from .models import Recognition, Badge, RecognitionProfile, Leaderboard, Team
+from django.db.models import Sum, Count
+from django.utils import timezone
+from datetime import timedelta
 
 @login_required
-@user_passes_test(is_volunteer)
-def download_certificate(request, recognition_id):
-    """Volunteer: Download a certificate if available."""
-    recognition = get_object_or_404(
-        Recognition, id=recognition_id, volunteer=request.user, certificate__isnull=False
-    )
-
-    file_path = os.path.join(settings.MEDIA_ROOT, str(recognition.certificate))
-    if not os.path.exists(file_path):
-        messages.error(request, "Certificate file is missing. Please contact support.")
-        raise Http404("Certificate not found.")
-
-    return FileResponse(
-        open(file_path, "rb"),
-        as_attachment=True,
-        filename=os.path.basename(file_path)
-    )
-
-
-# ========= Coordinator Views =========
-@login_required
-@user_passes_test(is_coordinator)
-def volunteer_recognition(request, volunteer_id):
-    """Coordinator: View & manage recognitions for a specific volunteer."""
-    volunteer = get_object_or_404(Volunteer, id=volunteer_id)
-    recognitions = Recognition.objects.filter(volunteer=volunteer).order_by("-created_at")
-
-    return render(request, "recognition/coordinator_volunteer.html", {
-        "volunteer": volunteer,
-        "recognitions": recognitions
-    })
-
-
-@login_required
-@user_passes_test(is_coordinator)
-def create_certificate(request, volunteer_id):
-    """Coordinator: Generate a recognition certificate for a volunteer."""
-    volunteer = get_object_or_404(Volunteer, id=volunteer_id)
-
-    cert = generate_certificate(volunteer)
-    recognition = Recognition.objects.create(volunteer=volunteer, certificate=cert)
-
-    messages.success(request, f"Certificate successfully generated for {volunteer.get_full_name()}.")
-    return redirect("recognition:volunteer_recognition", volunteer_id=volunteer.id)
-
-
-@login_required
-@user_passes_test(is_coordinator)
-def delete_recognition(request, recognition_id):
-    """Coordinator: Delete a recognition (if issued in error)."""
-    recognition = get_object_or_404(Recognition, id=recognition_id)
-    volunteer_id = recognition.volunteer.id
-    recognition.delete()
-
-    messages.warning(request, "Recognition deleted successfully.")
-    return redirect("recognition:volunteer_recognition", volunteer_id=volunteer_id)
-
-
-# ========= Admin Views =========
-@login_required
-@user_passes_test(is_admin)
-def recognition_list(request):
-    """Admin: View all recognitions across the platform."""
-    recognitions = Recognition.objects.select_related("volunteer").order_by("-created_at")
-    return render(request, "recognition/admin_list.html", {
-        "recognitions": recognitions
-    })
-
-
-@login_required
-@user_passes_test(is_admin)
-def leaderboard(request):
-    """Admin: View volunteer leaderboard by total recognitions."""
-    leaderboard_data = (
-        Volunteer.objects.annotate(total_recognitions=models.Count("recognition"))
-        .order_by("-total_recognitions")
-    )
-    return render(request, "recognition/leaderboard.html", {
-        "leaderboard": leaderboard_data
-    })
-
-
-# ========= Shared Dashboard =========
-@login_required
-def recognition_dashboard(request):
-    """
-    Single central Recognition dashboard for all roles
-    """
-    return render(request, "recognition/recognition_dashboard.html")
+def dashboard(request):
+    user = request.user
+    
+    # Get user's recognition profile
+    try:
+        profile = RecognitionProfile.objects.get(volunteer=user)
+    except RecognitionProfile.DoesNotExist:
+        profile = None
+    
+    # Get user's recent recognitions
+    recent_recognitions = Recognition.objects.filter(
+        volunteer=user
+    ).order_by('-created_at')[:5]
+    
+    # Get user's badges
+    user_badges = Badge.objects.filter(
+        recognition__volunteer=user
+    ).distinct()
+    
+    # Get leaderboard position
+    try:
+        leaderboard_entry = Leaderboard.objects.get(
+            volunteer=user,
+            timeframe='all_time'
+        )
+        rank = leaderboard_entry.rank
+    except Leaderboard.DoesNotExist:
+        rank = None
+    
+    # Get team leaderboard if user is in a team
+    team_leaderboard = None
+    if profile and profile.team:
+        team_leaderboard = Leaderboard.objects.filter(
+            team=profile.team,
+            timeframe='all_time'
+        ).order_by('rank')[:10]
+    
+    # Get top badges (most awarded)
+    top_badges = Badge.objects.annotate(
+        award_count=Count('recognition')
+    ).order_by('-award_count')[:5]
+    
+    # Get recent activity
+    recent_activity = Recognition.objects.filter(
+        team=profile.team if profile else None
+    ).order_by('-created_at')[:10] if profile else Recognition.objects.none()
+    
+    context = {
+        'profile': profile,
+        'recent_recognitions': recent_recognitions,
+        'user_badges': user_badges,
+        'rank': rank,
+        'team_leaderboard': team_leaderboard,
+        'top_badges': top_badges,
+        'recent_activity': recent_activity,
+    }
+    
+    return render(request, 'recognition/dashboard.html', context)

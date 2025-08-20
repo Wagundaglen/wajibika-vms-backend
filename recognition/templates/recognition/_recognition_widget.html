@@ -1,0 +1,122 @@
+<div class="recognition-widget">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recognition System</h5>
+                <a href="{% url 'recognition:dashboard' %}" class="btn btn-sm btn-light">View Dashboard</a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if user_profile %}
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="stat-card bg-primary text-white text-center p-3 rounded">
+                            <div class="stat-value h3 mb-0">{{ total_points }}</div>
+                            <div class="stat-label">Points</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card bg-success text-white text-center p-3 rounded">
+                            <div class="stat-value h3 mb-0">{{ user_badges|length }}</div>
+                            <div class="stat-label">Badges</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card bg-info text-white text-center p-3 rounded">
+                            <div class="stat-value h3 mb-0">#{{ user_rank|default:"N/A" }}</div>
+                            <div class="stat-label">Rank</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card bg-warning text-white text-center p-3 rounded">
+                            <div class="stat-value h3 mb-0">{{ recent_recognitions|length }}</div>
+                            <div class="stat-label">Recognitions</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mb-2">Your Badges</h6>
+                        <div class="badges-container">
+                            {% for badge in user_badges %}
+                                <span class="badge bg-primary me-1 mb-1">{{ badge.name }}</span>
+                            {% empty %}
+                                <p class="text-muted small">No badges earned yet</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="mb-2">Recent Recognitions</h6>
+                        <div class="recognitions-container" style="max-height: 200px; overflow-y: auto;">
+                            {% for recognition in recent_recognitions %}
+                                <div class="recognition-item p-2 mb-2 bg-light rounded">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>{{ recognition.badge.name|default:"Recognition" }}</strong>
+                                        <span class="badge bg-success">+{{ recognition.points }}</span>
+                                    </div>
+                                    <div class="text-muted small">{{ recognition.message|truncatewords:10 }}</div>
+                                </div>
+                            {% empty %}
+                                <p class="text-muted small">No recent recognitions</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if request.user.role == 'Admin' and total_volunteers %}
+                    <hr class="my-4">
+                    <h6 class="mb-2">System Statistics</h6>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <div class="d-flex justify-content-between p-2 bg-light rounded">
+                                <span>Volunteers:</span>
+                                <strong>{{ total_volunteers }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex justify-content-between p-2 bg-light rounded">
+                                <span>Badges:</span>
+                                <strong>{{ total_badges }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex justify-content-between p-2 bg-light rounded">
+                                <span>Recognitions:</span>
+                                <strong>{{ total_recognitions }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mb-2">Top Performers</h6>
+                    <div class="top-performers" style="max-height: 150px; overflow-y: auto;">
+                        {% for performer in top_performers %}
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span>{{ performer.volunteer.get_full_name|default:performer.volunteer.username }}</span>
+                                <span class="badge bg-primary">{{ performer.total_points }} pts</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <p class="text-muted">No recognition profile found</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.recognition-widget .stat-card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.recognition-widget .stat-card:hover {
+    transform: translateY(-3px);
+}
+
+.recognition-widget .recognition-item {
+    border-left: 3px solid #007bff;
+}
+</style>
