@@ -1,94 +1,264 @@
 {% extends "base.html" %}
-{% load static %}
-{% load crispy_forms_tags %}
+{% block title %}{{ feedback.title }} - Feedback Details{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold">Feedback Details</h2>
-        <a href="{% url 'feedback:feedback_dashboard' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
-        </a>
+<div class="container my-5">
+    <!-- Feedback Header -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">{{ feedback.title }}</h4>
+                    <div class="d-flex align-items-center mt-2">
+                        <span class="badge 
+                            {% if feedback.sentiment == 'positive' %}bg-success
+                            {% elif feedback.sentiment == 'negative' %}bg-danger
+                            {% else %}bg-warning{% endif %} me-2">
+                            {{ feedback.get_sentiment_display }}
+                        </span>
+                        <span class="badge bg-secondary me-2">{{ feedback.get_feedback_type_display }}</span>
+                        <span class="badge 
+                            {% if feedback.priority == 'urgent' %}bg-danger
+                            {% elif feedback.priority == 'high' %}bg-warning
+                            {% elif feedback.priority == 'medium' %}bg-info
+                            {% else %}bg-secondary{% endif %}">
+                            {{ feedback.get_priority_display }}
+                        </span>
+                        <span class="badge 
+                            {% if feedback.status == 'resolved' %}bg-success
+                            {% elif feedback.status == 'in_progress' %}bg-warning
+                            {% elif feedback.status == 'open' %}bg-danger
+                            {% else %}bg-secondary{% endif %}">
+                            {{ feedback.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    {% if request.user.role in 'Admin,Coordinator' %}
+                    <a href="{% url 'feedback:feedback_respond' feedback.pk %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-reply"></i> Respond
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Submitted By</h6>
+                    {% if feedback.user %}
+                        <div class="d-flex align-items-center">
+                            <img src="{{ feedback.user.profile_picture.url|default:'/static/images/default-avatar.png' }}" 
+                                 alt="{{ feedback.user.username }}" 
+                                 class="rounded-circle me-3" 
+                                 width="50" height="50">
+                            <div>
+                                <div class="fw-bold">{{ feedback.user.get_full_name|default:feedback.user.username }}</div>
+                                <div class="text-muted">{{ feedback.user.role }}</div>
+                                <div class="text-muted">{{ feedback.user.email }}</div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-person-circle text-muted me-3" style="font-size: 2rem;"></i>
+                            <div>
+                                <div class="fw-bold">{{ feedback.anonymous_name|default:'Anonymous' }}</div>
+                                <div class="text-muted">Anonymous User</div>
+                                {% if feedback.anonymous_email %}
+                                    <div class="text-muted">{{ feedback.anonymous_email }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <h6>Details</h6>
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Category</small>
+                            <div>
+                                {% if feedback.category %}
+                                    <span class="badge bg-secondary">{{ feedback.category.name }}</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">Uncategorized</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Created</small>
+                            <div>{{ feedback.created_at|date:"F d, Y g:i A" }}</div>
+                        </div>
+                    </div>
+                    {% if feedback.assigned_to %}
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <small class="text-muted">Assigned To</small>
+                            <div>{{ feedback.assigned_to.get_full_name|default:feedback.assigned_to.username }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="row">
+                <div class="col-12">
+                    <h6>Message</h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ feedback.message|linebreaks }}
+                    </div>
+                </div>
+            </div>
+            
+            {% if feedback.resolution_notes %}
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6>Resolution Notes</h6>
+                    <div class="p-3 bg-success text-white rounded">
+                        {{ feedback.resolution_notes|linebreaks }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Voting Section -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6>Was this helpful?</h6>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm {% if user_vote and user_vote.vote_type == 'up' %}btn-success{% else %}btn-outline-success %}" 
+                                onclick="voteFeedback('up', {{ feedback.pk }})">
+                            <i class="bi bi-hand-thumbs-up"></i> 
+                            <span id="upvotes-{{ feedback.pk }}">{{ feedback.votes.filter(vote_type='up').count }}</span>
+                        </button>
+                        <button class="btn btn-sm {% if user_vote and user_vote.vote_type == 'down' %}btn-danger{% else %}btn-outline-danger %}" 
+                                onclick="voteFeedback('down', {{ feedback.pk }})">
+                            <i class="bi bi-hand-thumbs-down"></i> 
+                            <span id="downvotes-{{ feedback.pk }}">{{ feedback.votes.filter(vote_type='down').count }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Flash Messages -->
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <!-- Feedback Card -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Feedback #{{ object.id }}</h5>
-            <span class="text-muted small">
-                Submitted on {{ object.created_at|date:"M d, Y H:i" }}
-            </span>
+    <!-- Responses Section -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Responses</h5>
         </div>
-
         <div class="card-body">
-            <!-- Basic Details -->
-            <dl class="row mb-0">
-                <dt class="col-sm-3">Category</dt>
-                <dd class="col-sm-9">{{ object.get_category_display }}</dd>
-
-                <dt class="col-sm-3">Submitted By</dt>
-                <dd class="col-sm-9">{{ object.user.get_full_name|default:object.user.username }}</dd>
-
-                <dt class="col-sm-3">Sentiment</dt>
-                <dd class="col-sm-9">
-                    {% if object.sentiment == "positive" %}
-                        <span class="badge bg-success">Positive</span>
-                    {% elif object.sentiment == "negative" %}
-                        <span class="badge bg-danger">Negative</span>
-                    {% else %}
-                        <span class="badge bg-secondary">Neutral</span>
-                    {% endif %}
-                </dd>
-
-                <dt class="col-sm-3">Status</dt>
-                <dd class="col-sm-9">
-                    {% if object.status == "pending" %}
-                        <span class="badge bg-warning text-dark">Pending</span>
-                    {% elif object.status == "resolved" %}
-                        <span class="badge bg-success">Resolved</span>
-                    {% else %}
-                        <span class="badge bg-info">In Progress</span>
-                    {% endif %}
-                </dd>
-            </dl>
-
-            <!-- Feedback Content -->
-            <hr>
-            <h6 class="fw-bold">Feedback Message</h6>
-            <p class="mb-3">{{ object.message|linebreaks }}</p>
-
-            {% if object.response %}
-                <div class="alert alert-info mt-4">
-                    <h6 class="fw-bold mb-2">Admin Response</h6>
-                    <p class="mb-0">{{ object.response|linebreaks }}</p>
-                    <small class="text-muted">Responded on {{ object.responded_at|date:"M d, Y H:i" }}</small>
+            {% if feedback.responses %}
+                {% for response in feedback.responses %}
+                <div class="mb-3 p-3 {% if response.is_internal %}bg-warning{% else %}bg-light{% endif %} rounded">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex align-items-center">
+                            <img src="{{ response.responder.profile_picture.url|default:'/static/images/default-avatar.png' }}" 
+                                 alt="{{ response.responder.username }}" 
+                                 class="rounded-circle me-3" 
+                                 width="40" height="40">
+                            <div>
+                                <div class="fw-bold">{{ response.responder.get_full_name|default:response.responder.username }}</div>
+                                <div class="text-muted">{{ response.responder.role }}</div>
+                                <small class="text-muted">{{ response.created_at|date:"M d, Y g:i A" }}</small>
+                            </div>
+                        </div>
+                        {% if response.is_internal %}
+                            <span class="badge bg-warning">Internal Note</span>
+                        {% endif %}
+                    </div>
+                    <div class="mt-2">
+                        {{ response.message|linebreaks }}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-3">
+                    <i class="bi bi-chat-square-text display-1 text-muted"></i>
+                    <p class="text-muted">No responses yet.</p>
                 </div>
             {% endif %}
-        </div>
-
-        <!-- Admin Actions -->
-        {% if user.is_staff %}
-            <div class="card-footer bg-light text-end">
-                <a href="{% url 'feedback:feedback_response' object.id %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-pencil"></i> Edit
-                </a>
-                <a href="{% url 'feedback:feedback_response' object.id %}" class="btn btn-outline-success btn-sm">
-                    <i class="bi bi-reply"></i> Respond
+            
+            {% if request.user.role in 'Admin,Coordinator' %}
+            <div class="mt-3">
+                <a href="{% url 'feedback:feedback_respond' feedback.pk %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add Response
                 </a>
             </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
+
+    <!-- Similar Feedback -->
+    {% if similar_feedback %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Similar Feedback</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for similar in similar_feedback %}
+                <div class="col-md-6 mb-3">
+                    <div class="p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <a href="{% url 'feedback:feedback_detail' similar.pk %}" class="text-decoration-none">
+                                    <h6 class="mb-1">{{ similar.title }}</h6>
+                                </a>
+                                <small class="text-muted">{{ similar.created_at|date:"M d, Y" }}</small>
+                            </div>
+                            <span class="badge 
+                                {% if similar.sentiment == 'positive' %}bg-success
+                                {% elif similar.sentiment == 'negative' %}bg-danger
+                                {% else %}bg-warning{% endif %}">
+                                {{ similar.get_sentiment_display }}
+                            </span>
+                        </div>
+                        <p class="mb-0 mt-2">{{ similar.message|truncatewords:20 }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<script>
+function voteFeedback(voteType, feedbackId) {
+    fetch(`/feedback/${feedbackId}/vote/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            vote_type: voteType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById(`upvotes-${feedbackId}`).textContent = data.upvotes;
+            document.getElementById(`downvotes-${feedbackId}`).textContent = data.downvotes;
+        }
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
 {% endblock %}

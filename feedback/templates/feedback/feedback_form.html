@@ -1,87 +1,107 @@
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
-
 {% block title %}Submit Feedback{% endblock %}
 
 {% block content %}
 <div class="container my-5">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
-            
-            <!-- Heading -->
-            <h2 class="text-center mb-4 fw-bold text-success">
-                ✍ Submit Your Feedback
-            </h2>
-            <p class="text-muted text-center mb-4">
-                We value your feedback. Please share your thoughts with us to help improve our services.
-            </p>
-
-            <!-- Feedback Card -->
-            <div class="card border-0 shadow-lg rounded-3">
-                <div class="card-body p-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Submit Feedback</h5>
+                </div>
+                <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
-                        {{ form|crispy }}
-
-                        <!-- Live Sentiment Preview -->
-                        <div class="mt-4">
-                            <label class="form-label fw-semibold">Live Sentiment Preview:</label>
-                            <div id="sentimentPreview" class="alert alert-secondary py-2 small shadow-sm">
-                                Start typing your message to see sentiment...
+                        
+                        <!-- Anonymous Option -->
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" 
+                                   name="is_anonymous" id="is_anonymous"
+                                   onchange="toggleAnonymousFields()">
+                            <label class="form-check-label" for="is_anonymous">
+                                Submit anonymously
+                            </label>
+                        </div>
+                        
+                        <!-- Anonymous Fields -->
+                        <div id="anonymousFields" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="anonymous_name" class="form-label">Your Name <span class="text-danger">*</span></label>
+                                        {{ form.anonymous_name }}
+                                        <div class="form-text">Required for anonymous feedback</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="anonymous_email" class="form-label">Email (optional)</label>
+                                        {{ form.anonymous_email }}
+                                        <div class="form-text">We'll only use this to follow up if needed</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        <!-- Action Buttons -->
-                        <div class="mt-4 d-flex justify-content-between">
-                            <a href="{% url 'feedback:feedback_dashboard' %}" class="btn btn-outline-secondary px-4">
-                                <i class="bi bi-arrow-left-circle"></i> Cancel
-                            </a>
-                            <button type="submit" class="btn btn-success px-4">
-                                <i class="bi bi-send-fill"></i> Submit Feedback
+                        
+                        <!-- Category -->
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                            {{ form.category }}
+                            <div class="form-text">Select the category that best describes your feedback</div>
+                        </div>
+                        
+                        <!-- Feedback Type -->
+                        <div class="mb-3">
+                            <label for="feedback_type" class="form-label">Feedback Type <span class="text-danger">*</span></label>
+                            {{ form.feedback_type }}
+                        </div>
+                        
+                        <!-- Priority -->
+                        <div class="mb-3">
+                            <label for="priority" class="form-label">Priority <span class="text-danger">*</span></label>
+                            {{ form.priority }}
+                            <div class="form-text">How urgent is this feedback?</div>
+                        </div>
+                        
+                        <!-- Title -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                            {{ form.title }}
+                            <div class="form-text">Brief summary of your feedback</div>
+                        </div>
+                        
+                        <!-- Message -->
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Message <span class="text-danger">*</span></label>
+                            {{ form.message }}
+                            <div class="form-text">Please provide detailed feedback to help us improve</div>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i> Submit Feedback
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
 
-<!-- Sentiment Detection Script -->
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    const messageInput = document.querySelector("#id_message");
-    const preview = document.getElementById("sentimentPreview");
-
-    const positiveWords = ["good", "great", "excellent", "happy", "love", "helpful", "awesome", "wonderful"];
-    const negativeWords = ["bad", "poor", "angry", "sad", "hate", "terrible", "awful", "frustrated"];
-
-    if (messageInput) {
-        messageInput.addEventListener("input", function () {
-            const text = messageInput.value.toLowerCase();
-            if (!text.trim()) {
-                preview.className = "alert alert-secondary py-2 small shadow-sm";
-                preview.textContent = "Start typing your message to see sentiment...";
-                return;
-            }
-
-            let score = 0;
-            positiveWords.forEach(word => { if (text.includes(word)) score++; });
-            negativeWords.forEach(word => { if (text.includes(word)) score--; });
-
-            if (score > 0) {
-                preview.className = "alert alert-success py-2 small shadow-sm";
-                preview.textContent = "😊 Positive tone detected";
-            } else if (score < 0) {
-                preview.className = "alert alert-danger py-2 small shadow-sm";
-                preview.textContent = "☹️ Negative tone detected";
-            } else {
-                preview.className = "alert alert-warning py-2 small shadow-sm";
-                preview.textContent = "😐 Neutral tone detected";
-            }
-        });
+function toggleAnonymousFields() {
+    const checkbox = document.getElementById('is_anonymous');
+    const fields = document.getElementById('anonymousFields');
+    
+    if (checkbox.checked) {
+        fields.style.display = 'block';
+        document.getElementById('id_anonymous_name').required = true;
+    } else {
+        fields.style.display = 'none';
+        document.getElementById('id_anonymous_name').required = false;
     }
-});
+}
 </script>
 {% endblock %}

@@ -1,403 +1,253 @@
-from datetime import timezone
-from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import (
-    CreateView, ListView, UpdateView, DetailView, DeleteView, TemplateView
-)
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.utils.decorators import method_decorator
+from django.views.generic import ListView, DetailView, CreateView, UpdateView
 from django.contrib import messages
+from django.db.models import Count, Avg, Q, F, ExpressionWrapper, DurationField
+from django.utils import timezone
+from django.http import JsonResponse
 from django.urls import reverse_lazy
-from django.http import HttpResponseForbidden
-from .models import Feedback, FeedbackResponse, Survey, Question, SurveyResponse
-from .forms import FeedbackForm, FeedbackResponseForm, SurveyForm, QuestionForm, SendSurveyForm
-from django.contrib.auth import get_user_model
-from .models import Volunteer
-from accounts.models import Volunteer
+from .models import Feedback, FeedbackCategory, FeedbackResponse, FeedbackVote, FeedbackAnalytics
+from .forms import FeedbackForm, FeedbackResponseForm
 
-User = get_user_model()
+class FeedbackListView(LoginRequiredMixin, ListView):
+    model = Feedback
+    template_name = 'feedback/feedback_list.html'
+    context_object_name = 'feedback_list'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        queryset = super().get_queryset().select_related('user', 'category', 'assigned_to')
+        
+        # Filter based on user role
+        if self.request.user.role == 'Volunteer':
+            # Volunteers see only their own feedback
+            queryset = queryset.filter(user=self.request.user)
+        elif self.request.user.role == 'Coordinator':
+            # Coordinators see feedback from their team
+            queryset = queryset.filter(
+                Q(user__profile__team=self.request.user.profile.team) |
+                Q(assigned_to=self.request.user)
+            )
+        
+        # Apply filters
+        status_filter = self.request.GET.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+            
+        sentiment_filter = self.request.GET.get('sentiment')
+        if sentiment_filter:
+            queryset = queryset.filter(sentiment=sentiment_filter)
+            
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status_choices'] = Feedback.STATUS_CHOICES
+        context['sentiment_choices'] = Feedback.SENTIMENT_CHOICES
+        
+        # Add user's feedback
+        if self.request.user.is_authenticated:
+            context['user_feedback'] = Feedback.objects.filter(user=self.request.user).order_by('-created_at')
+        
+        return context
 
+class FeedbackDetailView(LoginRequiredMixin, DetailView):
+    model = Feedback
+    template_name = 'feedback/feedback_detail.html'
+    context_object_name = 'feedback'
+    
+    def get_queryset(self):
+        return super().get_queryset().select_related(
+            'user', 'category', 'assigned_to'
+        ).prefetch_related('responses', 'votes')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Check if user has voted
+        if self.request.user.is_authenticated:
+            user_vote = FeedbackVote.objects.filter(
+                feedback=self.object,
+                user=self.request.user
+            ).first()
+            context['user_vote'] = user_vote
+        
+        # Get similar feedback
+        context['similar_feedback'] = Feedback.objects.filter(
+            category=self.object.category
+        ).exclude(id=self.object.id)[:5]
+        
+        return context
 
-# -------------------------------------------------
-# Role helpers
-# -------------------------------------------------
-def is_admin(user):
-    return user.is_staff and user.is_superuser
-
-def is_coordinator(user):
-    return user.is_staff and not user.is_superuser
-
-def is_admin_or_coordinator(user):
-    return user.is_staff
-
-
-# -------------------------------------------------
-# Feedback CRUD
-# -------------------------------------------------
-@method_decorator(login_required, name="dispatch")
-class FeedbackCreateView(CreateView):
+class FeedbackCreateView(LoginRequiredMixin, CreateView):
     model = Feedback
     form_class = FeedbackForm
-    template_name = "feedback/feedback_form.html"
-    success_url = reverse_lazy("feedback:my_feedback")
-
+    template_name = 'feedback/feedback_form.html'
+    success_url = reverse_lazy('feedback:feedback_list')
+    
     def form_valid(self, form):
-        form.instance.submitted_by = self.request.user
-        messages.success(self.request, "Feedback submitted successfully.")
+        feedback = form.save(commit=False)
+        
+        # Set user if not anonymous
+        if not feedback.is_anonymous:
+            feedback.user = self.request.user
+        
+        # Auto-detect sentiment (simplified)
+        feedback.sentiment = self.detect_sentiment(feedback.message)
+        
+        feedback.save()
+        
+        messages.success(self.request, 'Your feedback has been submitted successfully!')
         return super().form_valid(form)
+    
+    def detect_sentiment(self, text):
+        """Simple sentiment detection based on keywords"""
+        positive_words = ['good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'love', 'like']
+        negative_words = ['bad', 'terrible', 'awful', 'hate', 'dislike', 'poor', 'worst']
+        
+        text_lower = text.lower()
+        
+        positive_count = sum(1 for word in positive_words if word in text_lower)
+        negative_count = sum(1 for word in negative_words if word in text_lower)
+        
+        if positive_count > negative_count:
+            return 'positive'
+        elif negative_count > positive_count:
+            return 'negative'
+        else:
+            return 'neutral'
 
-
-@method_decorator(login_required, name="dispatch")
-class MyFeedbackListView(LoginRequiredMixin, ListView):
-    model = Feedback
-    template_name = "feedback/my_feedback.html"
-    context_object_name = "feedbacks"
-
-    def get_queryset(self):
-        # show only feedback submitted by the logged-in user
-        return Feedback.objects.filter(from_user=self.request.user)
-
-@method_decorator(login_required, name="dispatch")
-class FeedbackDashboardView(TemplateView):
-    template_name = "feedback/dashboard.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-
-        # Feedbacks submitted by the logged-in user (volunteer)
-        context["my_feedbacks"] = Feedback.objects.filter(from_user=user)
-
-        # Feedbacks assigned to this user (if coordinator/admin)
-        context["assigned_feedbacks"] = Feedback.objects.filter(to_user=user)
-
-        # Surveys assigned to this user
-        context["my_surveys"] = Survey.objects.filter(assigned_users=user)
-
-        return context
-
-
-
-@method_decorator(login_required, name="dispatch")
-class FeedbackDetailView(DetailView):
-    model = Feedback
-    template_name = "feedback/feedback_detail.html"
-    context_object_name = "feedback"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        feedback = self.object
-        context["responses"] = FeedbackResponse.objects.filter(feedback=feedback)
-        if is_admin_or_coordinator(self.request.user):
-            context["response_form"] = FeedbackResponseForm()
-        return context
-
-    def post(self, request, *args, **kwargs):
-        """Allow admin/coordinator to submit a response inline"""
-        self.object = self.get_object()
-        if not is_admin_or_coordinator(request.user):
-            messages.error(request, "You are not allowed to respond.")
-            return redirect("feedback:feedback_detail", pk=self.object.pk)
-
-        form = FeedbackResponseForm(request.POST)
-        if form.is_valid():
-            response = form.save(commit=False)
-            response.feedback = self.object
-            response.responded_by = request.user
-            response.save()
-            messages.success(request, "Response added successfully.")
-            return redirect("feedback:feedback_detail", pk=self.object.pk)
-
-        context = self.get_context_data()
-        context["response_form"] = form
-        return self.render_to_response(context)
-
-
-@method_decorator(login_required, name="dispatch")
-class FeedbackResponseView(CreateView):
+class FeedbackResponseCreateView(LoginRequiredMixin, CreateView):
     model = FeedbackResponse
     form_class = FeedbackResponseForm
-    template_name = "feedback/feedback_response_form.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        if not is_admin_or_coordinator(request.user):
-            return HttpResponseForbidden("You are not allowed to respond to feedback.")
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["feedback"] = get_object_or_404(Feedback, pk=self.kwargs["pk"])
-        return context
-
+    template_name = 'feedback/response_form.html'
+    
     def form_valid(self, form):
-        feedback = get_object_or_404(Feedback, pk=self.kwargs["pk"])
-        form.instance.feedback = feedback
-        form.instance.responded_by = self.request.user
-        messages.success(self.request, "Response added successfully.")
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse_lazy("feedback:feedback_detail", kwargs={"pk": self.kwargs["pk"]})
-
-
-@method_decorator(login_required, name="dispatch")
-class FeedbackUpdateView(UpdateView):
-    model = Feedback
-    form_class = FeedbackForm
-    template_name = "feedback/feedback_form.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        feedback = self.get_object()
-        if not (is_admin(request.user) or request.user == feedback.submitted_by):
-            return HttpResponseForbidden("Not allowed to edit this feedback.")
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_success_url(self):
-        return reverse_lazy("feedback:feedback_detail", kwargs={"pk": self.object.pk})
-
-
-@method_decorator(login_required, name="dispatch")
-class FeedbackDeleteView(DeleteView):
-    model = Feedback
-    template_name = "feedback/feedback_confirm_delete.html"
-    success_url = reverse_lazy("feedback:feedback_dashboard")
-
-    def dispatch(self, request, *args, **kwargs):
-        if not is_admin(request.user):
-            return HttpResponseForbidden("Only admins can delete feedback.")
-        return super().dispatch(request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, "Feedback deleted successfully.")
-        return super().delete(request, *args, **kwargs)
-
+        response = form.save(commit=False)
+        response.responder = self.request.user
+        response.feedback_id = self.kwargs['feedback_id']
+        response.save()
+        
+        # Update feedback status if resolved
+        feedback = response.feedback
+        if feedback.status != 'resolved':
+            feedback.status = 'in_progress'
+            feedback.save()
+        
+        messages.success(self.request, 'Your response has been added!')
+        return redirect('feedback:feedback_detail', pk=feedback.pk)
 
 @login_required
-def mark_feedback_resolved(request, pk):
-    feedback = get_object_or_404(Feedback, pk=pk)
-    if not is_admin_or_coordinator(request.user):
-        return HttpResponseForbidden("You are not allowed to resolve feedback.")
-    feedback.status = "resolved"
-    feedback.save()
-    messages.success(request, "Feedback marked as resolved.")
-    return redirect("feedback:feedback_detail", pk=pk)
+def vote_feedback(request, feedback_id):
+    feedback = get_object_or_404(Feedback, pk=feedback_id)
+    vote_type = request.POST.get('vote_type')
+    
+    if vote_type in ['up', 'down']:
+        FeedbackVote.objects.update_or_create(
+            feedback=feedback,
+            user=request.user,
+            defaults={'vote_type': vote_type}
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'upvotes': feedback.votes.filter(vote_type='up').count(),
+            'downvotes': feedback.votes.filter(vote_type='down').count()
+        })
+    
+    return JsonResponse({'success': False})
 
-
-# -------------------------------------------------
-# Survey CRUD
-# -------------------------------------------------
-@method_decorator(login_required, name="dispatch")
-class SurveyListView(ListView):
-    model = Survey
-    template_name = "feedback/survey_list.html"
-    context_object_name = "surveys"
-
-    def get_queryset(self):
-        if is_admin_or_coordinator(self.request.user):
-            return Survey.objects.all()
-        # Volunteers only see surveys assigned to them
-        return Survey.objects.filter(surveyresponse__user=self.request.user).distinct()
-
-
-@method_decorator(login_required, name="dispatch")
-class SurveyCreateView(CreateView):
-    model = Survey
-    form_class = SurveyForm
-    template_name = "feedback/survey_form.html"
-    success_url = reverse_lazy("feedback:survey_list")
-
-    def dispatch(self, request, *args, **kwargs):
-        if not is_admin_or_coordinator(request.user):
-            return HttpResponseForbidden("Not allowed to create surveys.")
-        return super().dispatch(request, *args, **kwargs)
-
-
-@method_decorator(login_required, name="dispatch")
-class AssignedSurveyListView(ListView):
-    model = Survey
-    template_name = "feedback/assigned_surveys.html"
-    context_object_name = "surveys"
-
-    def get_queryset(self):
-        # Assuming Survey model has a ManyToManyField "assigned_users"
-        return Survey.objects.filter(assigned_users=self.request.user)
-
-
-@method_decorator(login_required, name="dispatch")
-class SurveyDetailView(DetailView):
-    model = Survey
-    template_name = "feedback/survey_detail.html"
-    context_object_name = "survey"
-
-@method_decorator(login_required, name="dispatch")
-class SurveyResponseDetailView(DetailView):
-    model = SurveyResponse
-    template_name = "feedback/survey_response_detail.html"
-    context_object_name = "response"
-
-@method_decorator(login_required, name="dispatch")
-class SurveyThanksView(TemplateView):
-    template_name = "feedback/survey_thanks.html"
-
-@method_decorator(login_required, name="dispatch")
-class SurveyUpdateView(UpdateView):
-    model = Survey
-    form_class = SurveyForm
-    template_name = "feedback/survey_form.html"
-    success_url = reverse_lazy("feedback:survey_list")
-
-    def dispatch(self, request, *args, **kwargs):
-        if not is_admin_or_coordinator(request.user):
-            return HttpResponseForbidden("Not allowed to update surveys.")
-        return super().dispatch(request, *args, **kwargs)
-
-
-@method_decorator(login_required, name="dispatch")
-class SurveyDeleteView(DeleteView):
-    model = Survey
-    template_name = "feedback/survey_confirm_delete.html"
-    success_url = reverse_lazy("feedback:feedback_dashboard")
-
-    def dispatch(self, request, *args, **kwargs):
-        if not is_admin(request.user):
-            return HttpResponseForbidden("Only admins can delete surveys.")
-        return super().dispatch(request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, "Survey deleted successfully.")
-        return super().delete(request, *args, **kwargs)
-
-
-# -------------------------------------------------
-# Questions (Admin/Coordinator only)
-# -------------------------------------------------
 @login_required
-def add_question(request, survey_id):
-    survey = get_object_or_404(Survey, pk=survey_id)
-    if not is_admin_or_coordinator(request.user):
-        return HttpResponseForbidden("Not allowed to add questions.")
-
-    if request.method == "POST":
-        form = QuestionForm(request.POST)
-        if form.is_valid():
-            question = form.save(commit=False)
-            question.survey = survey
-            question.save()
-            messages.success(request, "Question added successfully.")
-            return redirect("feedback:survey_detail", pk=survey.id)
-    else:
-        form = QuestionForm()
-
-    return render(request, "feedback/question_form.html", {"form": form, "survey": survey})
-
-
-@method_decorator(login_required, name="dispatch")
-class QuestionUpdateView(UpdateView):
-    model = Question
-    form_class = QuestionForm
-    template_name = "feedback/question_form.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        if not is_admin_or_coordinator(request.user):
-            return HttpResponseForbidden("Not allowed to update questions.")
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_success_url(self):
-        return reverse_lazy("feedback:survey_detail", kwargs={"pk": self.object.survey.pk})
-
-
-@method_decorator(login_required, name="dispatch")
-class QuestionDeleteView(DeleteView):
-    model = Question
-    template_name = "feedback/question_confirm_delete.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        if not is_admin_or_coordinator(request.user):
-            return HttpResponseForbidden("Not allowed to delete questions.")
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_success_url(self):
-        return reverse_lazy("feedback:survey_detail", kwargs={"pk": self.object.survey.pk})
-
-
-# -------------------------------------------------
-# Survey Sending (Admin/Coordinator)
-# -------------------------------------------------
-@login_required
-def send_survey(request):
-    if request.method == "POST":
-        form = SendSurveyForm(request.POST)
-        if form.is_valid():
-            survey = form.cleaned_data["survey"]
-            send_to = request.POST.get("send_to")
-            selected_volunteers = form.cleaned_data["volunteers"]
-
-            # Decide recipients
-            if send_to == "all":
-                volunteers = User.objects.filter(role="Volunteer")
-            else:
-                volunteers = selected_volunteers
-
-            count = 0
-            for volunteer in volunteers:
-                # Assign to ManyToMany field
-                if volunteer not in survey.assigned_users.all():
-                    survey.assigned_users.add(volunteer)
-
-                    # Also create a SurveyResponse tracker
-                    SurveyResponse.objects.get_or_create(
-                        survey=survey,
-                        user=volunteer,
-                        defaults={"assigned_by": request.user}
-                    )
-                    count += 1
-
-            messages.success(
-                request,
-                f"Survey '{survey.title}' sent to {count} volunteers."
-            )
-            return redirect("feedback:survey_list")
-    else:
-        form = SendSurveyForm()
-
-    return render(request, "feedback/send_survey.html", {"form": form})
-
-
-
-# -------------------------------------------------
-# Survey Participation (Volunteers)
-# -------------------------------------------------
-@login_required
-def submit_survey(request, pk):
-    survey = get_object_or_404(Survey, pk=pk)
-
-    # 🚫 Block Admins and Coordinators from submitting
-    if is_admin_or_coordinator(request.user):
-        messages.warning(request, "Admins and Coordinators cannot submit surveys. You may only view results.")
-        return redirect("feedback:survey_detail", pk=survey.pk)
-
-    # ✅ Ensure volunteer is assigned this survey
-    survey_response = SurveyResponse.objects.filter(user=request.user, survey=survey).first()
-    if not survey_response:
-        return HttpResponseForbidden("You were not assigned this survey.")
-
-    if request.method == "POST":
-        # Delete old answers if re-submitting
-        survey_response.answers.all().delete()
-
-        # Save answers
-        for q in survey.questions.all():
-            answer_text = request.POST.get(f"question_{q.id}", "").strip()
-            if answer_text:  # Save only if answered
-                survey_response.answers.create(
-                    question=q,
-                    answer_text=answer_text
-                )
-
-        survey_response.submitted_at = timezone.now()
-        survey_response.save()
-
-        messages.success(request, "Survey submitted successfully!")
-        return redirect("feedback:survey_thanks")
-
-    return render(request, "feedback/survey_submit.html", {"survey": survey})
+def feedback_dashboard(request):
+    """Dashboard for staff to view feedback analytics"""
+    if request.user.role not in ['Admin', 'Coordinator']:
+        messages.error(request, 'You do not have permission to view this page.')
+        return redirect('feedback:feedback_list')
+    
+    # Get basic stats
+    total_feedback = Feedback.objects.count()
+    open_feedback = Feedback.objects.filter(status='open').count()
+    resolved_this_week = Feedback.objects.filter(
+        status='resolved',
+        resolved_at__gte=timezone.now() - timezone.timedelta(days=7)
+    ).count()
+    
+    # Get sentiment distribution
+    sentiment_data = Feedback.objects.values('sentiment').annotate(
+        count=Count('id')
+    )
+    
+    # Get category distribution
+    category_data = Feedback.objects.values('category__name').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Get recent feedback
+    recent_feedback = Feedback.objects.select_related('user').order_by('-created_at')[:10]
+    
+    # Get top categories
+    top_categories = category_data[:5]
+    
+    # Get resolution time stats
+    resolved_feedback = Feedback.objects.filter(
+        status='resolved',
+        resolved_at__isnull=False
+    ).annotate(
+        resolution_time=ExpressionWrapper(
+            F('resolved_at') - F('created_at'),
+            output_field=DurationField()
+        )
+    )
+    
+    avg_resolution_time = resolved_feedback.aggregate(
+        avg_time=Avg('resolution_time')
+    )['avg_time']
+    
+    # Calculate average resolution time in days and hours
+    avg_resolution_hours = None
+    if avg_resolution_time:
+        total_seconds = avg_resolution_time.total_seconds()
+        avg_resolution_hours = {
+            'days': int(total_seconds // 86400),
+            'hours': int((total_seconds % 86400) // 3600)
+        }
+    
+    # Get all categories for filter dropdown
+    categories = FeedbackCategory.objects.all()
+    
+    # Get status and sentiment choices
+    status_choices = Feedback.STATUS_CHOICES
+    sentiment_choices = Feedback.SENTIMENT_CHOICES
+    
+    # Calculate counts for dashboard stats
+    pending_response_count = Feedback.objects.filter(
+        status__in=['open', 'in_progress']
+    ).count()
+    
+    resolved_this_week_count = Feedback.objects.filter(
+        status='resolved',
+        resolved_at__gte=timezone.now() - timezone.timedelta(days=7)
+    ).count()
+    
+    total_feedback_count = Feedback.objects.count()
+    
+    context = {
+        'total_feedback': total_feedback,
+        'open_feedback': open_feedback,
+        'resolved_this_week': resolved_this_week,
+        'sentiment_data': sentiment_data,
+        'category_data': category_data,
+        'recent_feedback': recent_feedback,
+        'top_categories': top_categories,
+        'avg_resolution_time': avg_resolution_time,
+        'avg_resolution_hours': avg_resolution_hours,
+        'categories': categories,
+        'status_choices': status_choices,
+        'sentiment_choices': sentiment_choices,
+        'pending_response_count': pending_response_count,
+        'resolved_this_week_count': resolved_this_week_count,
+        'total_feedback_count': total_feedback_count,
+    }
+    
+    return render(request, 'feedback/dashboard.html', context)

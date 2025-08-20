@@ -74,6 +74,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'communication.context_processors.unread_counts',
                 'recognition.context_processors.recognition_data',
+                'feedback.context_processors.feedback_stats',
 
             ],
         },

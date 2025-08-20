@@ -1,219 +1,180 @@
 from django.db import models
-from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 
-User = settings.AUTH_USER_MODEL
+User = get_user_model()
 
-
-# -------------------------------------------------
-# VOLUNTEER MODEL
-# -------------------------------------------------
-class Volunteer(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    full_name = models.CharField(max_length=100)
-    email = models.EmailField()
-
+class FeedbackCategory(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
     def __str__(self):
-        return self.full_name
+        return self.name
 
-
-# -------------------------------------------------
-# FEEDBACK MODEL
-# -------------------------------------------------
 class Feedback(models.Model):
     STATUS_CHOICES = [
         ('open', 'Open'),
-        ('reviewed', 'Reviewed'),
+        ('in_progress', 'In Progress'),
         ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
     ]
-
+    
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+    
     SENTIMENT_CHOICES = [
         ('positive', 'Positive'),
         ('neutral', 'Neutral'),
         ('negative', 'Negative'),
     ]
-
-    CATEGORY_CHOICES = [
+    
+    FEEDBACK_TYPE_CHOICES = [
         ('general', 'General Feedback'),
-        ('issue', 'Issue Report'),
-        ('task', 'Task Related'),
-        ('training', 'Training Related'),
-        ('survey', 'Survey Response'),
-        ('other', 'Other'),
+        ('suggestion', 'Suggestion'),
+        ('complaint', 'Complaint'),
+        ('compliment', 'Compliment'),
+        ('issue_report', 'Issue Report'),
     ]
-
-    from_user = models.ForeignKey(
-        User, on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='feedback_sent',
-        verbose_name="Sender"
+    
+    # Optional: If feedback is from a volunteer/staff
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='feedback_given'
     )
-
-    to_user = models.ForeignKey(
-        User, on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='feedback_received',
-        verbose_name="Recipient"
+    
+    # For anonymous feedback
+    is_anonymous = models.BooleanField(default=False)
+    anonymous_name = models.CharField(max_length=100, blank=True, null=True)
+    anonymous_email = models.EmailField(blank=True, null=True)
+    
+    # Feedback details
+    category = models.ForeignKey(
+        FeedbackCategory, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
     )
-
-    reassigned_to = models.ForeignKey(
-        User, on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='feedback_reassigned',
-        verbose_name='Reassigned To',
-        help_text="If reassigned, this staff member will handle the feedback."
+    feedback_type = models.CharField(
+        max_length=20, 
+        choices=FEEDBACK_TYPE_CHOICES, 
+        default='general'
     )
-
-    category = models.CharField(
-        max_length=50, choices=CATEGORY_CHOICES, default='general'
-    )
-    sentiment = models.CharField(
-        max_length=10, choices=SENTIMENT_CHOICES, blank=True, null=True
-    )
-
+    title = models.CharField(max_length=200)
     message = models.TextField()
-    response = models.TextField(
-        blank=True, null=True,
-        help_text="Coordinator/Admin reply to the volunteer"
+    sentiment = models.CharField(
+        max_length=10, 
+        choices=SENTIMENT_CHOICES, 
+        default='neutral'
     )
-
-    anonymous = models.BooleanField(
-        default=False,
-        help_text="If checked, sender’s identity will be hidden."
+    
+    # For issue tracking
+    priority = models.CharField(
+        max_length=10, 
+        choices=PRIORITY_CHOICES, 
+        default='medium'
     )
-
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default='open'
+        max_length=15, 
+        choices=STATUS_CHOICES, 
+        default='open'
     )
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    updated_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='feedback_updated',
-        verbose_name='Last Updated By'
+    
+    # Assignment and resolution
+    assigned_to = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='assigned_feedback'
     )
-
+    resolution_notes = models.TextField(blank=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
-    survey_sent = models.BooleanField(default=False)
-
-    def display_sender(self):
-        """Return sender name or 'Anonymous'/'Unknown' if hidden/missing."""
-        if self.anonymous:
-            return "Anonymous"
-        if self.from_user:
-            return getattr(self.from_user, "get_full_name", lambda: "")() \
-                   or getattr(self.from_user, "username", None)
-        return "Unknown"
-
-    def mark_resolved(self, user=None):
-        """Mark feedback as resolved and set resolution details."""
-        self.status = 'resolved'
-        self.resolved_at = timezone.now()
-        if user:
-            self.updated_by = user
-        self.save()
-
-    def __str__(self):
-        target = self.reassigned_to or self.to_user or "Admin/Staff"
-        return f"{self.get_category_display()} → {target} ({self.status})"
-
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
     class Meta:
         ordering = ['-created_at']
-
+    
+    def __str__(self):
+        return f"{self.title} - {self.get_status_display()}"
+    
+    def save(self, *args, **kwargs):
+        # If status is resolved, set resolved_at
+        if self.status == 'resolved' and not self.resolved_at:
+            self.resolved_at = timezone.now()
+        elif self.status != 'resolved' and self.resolved_at:
+            self.resolved_at = None
+            
+        super().save(*args, **kwargs)
 
 class FeedbackResponse(models.Model):
     feedback = models.ForeignKey(
-        Feedback, on_delete=models.CASCADE, related_name="responses"
+        Feedback, 
+        on_delete=models.CASCADE, 
+        related_name='responses'
     )
-    responded_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="feedback_responses"
+    responder = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
     )
     message = models.TextField()
+    is_internal = models.BooleanField(default=False)  # Internal notes vs public responses
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
+    class Meta:
+        ordering = ['created_at']
+    
     def __str__(self):
-        return f"Response by {self.responded_by} on {self.feedback}"
+        return f"Response to {self.feedback.title}"
 
-
-# -------------------------------------------------
-# SURVEY MODEL
-# -------------------------------------------------
-class Survey(models.Model):
-    title = models.CharField(max_length=255, default="General Survey")
-    description = models.TextField(blank=True, null=True)
-    instructions = models.TextField(blank=True, null=True)
-    category = models.CharField(max_length=100, blank=True, null=True)
-    start_date = models.DateTimeField(blank=True, null=True)
-    end_date = models.DateTimeField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-
-    created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, related_name="created_surveys"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    assigned_users = models.ManyToManyField(
-        User, related_name="assigned_surveys", blank=True
-    )
-
-    def __str__(self):
-        return self.title
-
-
-class Question(models.Model):
-    QUESTION_TYPES = [
-        ('text', 'Text'),
-        ('multiple_choice', 'Multiple Choice'),
-        ('rating', 'Rating (1–5)'),
-    ]
-
-    survey = models.ForeignKey(
-        Survey, related_name='questions', on_delete=models.CASCADE
-    )
-    text = models.CharField(max_length=300)
-    question_type = models.CharField(max_length=50, choices=QUESTION_TYPES)
-    required = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.text
-
-
-class SurveyResponse(models.Model):
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('completed', 'Completed'),
-        ('reviewed', 'Reviewed'),
-    ]
-
-    survey = models.ForeignKey(
-        Survey, on_delete=models.CASCADE, related_name="responses"
+class FeedbackVote(models.Model):
+    """For allowing users to vote on feedback (like/dislike)"""
+    feedback = models.ForeignKey(
+        Feedback, 
+        on_delete=models.CASCADE, 
+        related_name='votes'
     )
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="survey_responses"
+        User, 
+        on_delete=models.CASCADE
     )
-    assigned_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name="survey_assignments"
+    vote_type = models.CharField(
+        max_length=10, 
+        choices=[('up', 'Upvote'), ('down', 'Downvote')]
     )
-
-    status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default='pending'
-    )
-    submitted_at = models.DateTimeField(auto_now_add=True)
-
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['feedback', 'user']
+    
     def __str__(self):
-        return f"{self.user} → {self.survey.title} ({self.status})"
+        return f"{self.user.username} {self.vote_type}d {self.feedback.title}"
 
-
-class SurveyAnswer(models.Model):
-    response = models.ForeignKey(
-        SurveyResponse, on_delete=models.CASCADE, related_name="answers"
-    )
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    answer_text = models.TextField(blank=True, null=True)
-
+class FeedbackAnalytics(models.Model):
+    """Store aggregated analytics for feedback"""
+    date = models.DateField()
+    total_feedback = models.IntegerField(default=0)
+    positive_count = models.IntegerField(default=0)
+    neutral_count = models.IntegerField(default=0)
+    negative_count = models.IntegerField(default=0)
+    resolved_count = models.IntegerField(default=0)
+    avg_resolution_time = models.FloatField(default=0.0)  # in hours
+    
+    class Meta:
+        unique_together = ['date']
+    
     def __str__(self):
-        return f"{self.response.user} - {self.question.text}"
+        return f"Analytics for {self.date}"
