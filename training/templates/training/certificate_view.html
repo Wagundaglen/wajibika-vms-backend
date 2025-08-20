@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Training Certificate{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-success">Training Certificate</h1>
+        <a href="{% if request.user.role == 'Admin' %}{% url 'training:course_list' %}{% else %}{% url 'training:my_training' %}{% endif %}" class="btn btn-outline-success">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <!-- Certificate Display -->
+            <div class="card shadow-lg border-success">
+                <div class="card-body text-center p-5">
+                    <div class="certificate-container border-2 border-success rounded p-4 bg-light">
+                        <!-- Certificate Header -->
+                        <div class="mb-4">
+                            <h2 class="text-success mb-0">Certificate of Completion</h2>
+                            <div class="border-bottom border-success w-50 mx-auto my-3"></div>
+                            <p class="text-muted">This is to certify that</p>
+                        </div>
+                        
+                        <!-- Recipient Name -->
+                        <div class="mb-4">
+                            <h3 class="text-primary">{{ certificate.assignment.volunteer.get_full_name|default:certificate.assignment.volunteer.username }}</h3>
+                        </div>
+                        
+                        <!-- Certificate Content -->
+                        <div class="mb-4">
+                            <p class="lead">has successfully completed the training course</p>
+                            <h4 class="text-success">{{ certificate.assignment.course.title }}</h4>
+                            <p class="text-muted mt-3">{{ certificate.assignment.course.description|truncatewords:30 }}</p>
+                        </div>
+                        
+                        <!-- Certificate Details -->
+                        <div class="row mb-4">
+                            <div class="col-md-6 text-start">
+                                <p class="mb-1"><strong>Certificate ID:</strong> {{ certificate.certificate_id }}</p>
+                                <p class="mb-1"><strong>Date Issued:</strong> {{ certificate.issued_date|date:"F d, Y" }}</p>
+                                <p class="mb-1"><strong>Duration:</strong> {{ certificate.assignment.course.duration }}</p>
+                            </div>
+                            <div class="col-md-6 text-start">
+                                <p class="mb-1"><strong>Modules Completed:</strong> {{ certificate.assignment.progress.all|length }}</p>
+                                <p class="mb-1"><strong>Completion Date:</strong> {{ certificate.assignment.progress.last.completed_at|date:"F d, Y" }}</p>
+                                <p class="mb-1"><strong>Status:</strong> <span class="badge bg-success">Completed</span></p>
+                            </div>
+                        </div>
+                        
+                        <!-- Certificate Footer -->
+                        <div class="mt-5">
+                            <div class="row">
+                                <div class="col-md-6 text-start">
+                                    <div class="border-top border-success pt-2">
+                                        <p class="mb-0"><small>Issued by Wajibika Initiative</small></p>
+                                        <p class="mb-0"><small>{{ certificate.assigned_by.get_full_name|default:certificate.assigned_by.username|default:"System" }}</small></p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <div class="border-top border-success pt-2">
+                                        <p class="mb-0"><small>Verification Code</small></p>
+                                        <p class="mb-0"><small>{{ certificate.certificate_id }}</small></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="card mt-4">
+                <div class="card-body text-center">
+                    <a href="{% url 'training:download_certificate' certificate.pk %}" class="btn btn-success btn-lg">
+                        <i class="bi bi-download"></i> Download Certificate
+                    </a>
+                    <button class="btn btn-outline-secondary btn-lg ms-2" onclick="window.print()">
+                        <i class="bi bi-printer"></i> Print Certificate
+                    </button>
+                    {% if request.user.role == 'Admin' %}
+                        <a href="{% url 'training:assignment_detail' certificate.assignment.pk %}" class="btn btn-outline-info btn-lg ms-2">
+                            <i class="bi bi-eye"></i> View Assignment
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Verification Information -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Certificate Verification</h5>
+                </div>
+                <div class="card-body">
+                    <p>This certificate can be verified using the Certificate ID: <strong>{{ certificate.certificate_id }}</strong></p>
+                    <p class="mb-0">To verify this certificate, contact the training administrator with the Certificate ID.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .certificate-container {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    @media print {
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .card {
+            border: none !important;
+            box-shadow: none !important;
+        }
+        
+        .btn {
+            display: none !important;
+        }
+        
+        body {
+            background: white !important;
+        }
+    }
+</style>
+{% endblock %}

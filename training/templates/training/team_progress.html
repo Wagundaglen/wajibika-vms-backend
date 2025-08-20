@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Team Training Progress{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4">Team Training Progress</h1>
+    
+    {% if volunteer_progress %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Volunteer</th>
+                        <th>Total Assignments</th>
+                        <th>In Progress</th>
+                        <th>Completed</th>
+                        <th>Progress</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in volunteer_progress %}
+                        <tr>
+                            <td>{{ item.volunteer.user.username }}</td>
+                            <td>{{ item.total }}</td>
+                            <td>{{ item.in_progress }}</td>
+                            <td>{{ item.completed }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ item.progress_percent }}%;" 
+                                         aria-valuenow="{{ item.progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                                        {{ item.progress_percent }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{% url 'training:assign_training' %}?volunteer={{ item.volunteer.pk }}" class="btn btn-sm btn-outline-primary">Assign Training</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No team members found or no training assignments.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

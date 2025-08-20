@@ -17,6 +17,11 @@
             </div>
         </div>
         
+        <!-- Training Management -->
+        <div class="col-md-4">
+            {% include "training/_admin_widget.html" %}
+        </div>
+    
         <!-- Manage Tasks -->
         <div class="col-md-4">
             <div class="card shadow border-0 h-100">
@@ -29,17 +34,7 @@
             </div>
         </div>
         
-        <!-- Training Oversight -->
-        <div class="col-md-4">
-            <div class="card shadow border-0 h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-mortarboard-fill display-4 text-info"></i>
-                    <h5 class="mt-3">Training Oversight</h5>
-                    <p>Assign and monitor volunteer training modules.</p>
-                    <a href="{% url 'training_module' %}" class="btn btn-outline-info">Go</a>
-                </div>
-            </div>
-        </div>
+        
         
         <!-- Recognition System -->
         <div class="col-md-12">

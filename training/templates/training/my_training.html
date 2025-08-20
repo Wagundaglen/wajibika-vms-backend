@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My Training{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-primary">My Training</h1>
+        <a href="{% url 'training:volunteer_dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    {% if error %}
+        <div class="alert alert-danger">
+            <h5>Error</h5>
+            <p>{{ error }}</p>
+            <p>Please contact the system administrator.</p>
+        </div>
+    {% else %}
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card shadow border-0 h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-journal-text display-4 text-info"></i>
+                        <h5 class="mt-3">Total Courses</h5>
+                        <div class="h2">{{ assignments|length }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow border-0 h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-clock-history display-4 text-warning"></i>
+                        <h5 class="mt-3">In Progress</h5>
+                        <div class="h2">{{ active_assignments|length }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow border-0 h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-check-circle-fill display-4 text-success"></i>
+                        <h5 class="mt-3">Completed</h5>
+                        <div class="h2">{{ completed_assignments|length }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card shadow border-0 h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-award-fill display-4 text-warning"></i>
+                        <h5 class="mt-3">Certificates</h5>
+                        <div class="h2">{{ completed_assignments|length }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Assignments -->
+        {% if upcoming_assignments %}
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Upcoming Training</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for assignment in upcoming_assignments %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ assignment.course.title }}</h6>
+                                        <p class="mb-1 text-muted">{{ assignment.course.description|truncatewords:15 }}</p>
+                                        <small class="text-muted">
+                                            Assigned: {{ assignment.assigned_date|date:"M d, Y" }}
+                                            {% if assignment.due_date %}
+                                                | Due: {{ assignment.due_date|date:"M d, Y" }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-secondary">Assigned</span>
+                                        <a href="{% url 'training:start_module' assignment.pk assignment.course.modules.first.pk %}" 
+                                           class="btn btn-sm btn-primary ms-2">
+                                            Start
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Active Assignments -->
+        {% if active_assignments %}
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">In Progress</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for assignment in active_assignments %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ assignment.course.title }}</h6>
+                                        <div class="progress mb-2" style="height: 10px;">
+                                            <div class="progress-bar bg-warning" role="progressbar" 
+                                                 style="width: {{ assignment.get_progress_percentage }}%" 
+                                                 aria-valuenow="{{ assignment.get_progress_percentage }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">
+                                            {{ assignment.get_completed_modules }}/{{ assignment.course.modules.count }} modules completed
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <a href="{% url 'training:assignment_detail' assignment.pk %}" 
+                                           class="btn btn-sm btn-outline-warning">
+                                            Continue
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Completed Certificates -->
+        {% if completed_assignments %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">My Certificates</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for assignment in completed_assignments %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-success">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="card-title">{{ assignment.course.title }}</h6>
+                                                <p class="card-text small text-muted">
+                                                    Completed on {{ assignment.certificate.issued_date|date:"M d, Y" }}
+                                                </p>
+                                                <p class="card-text small text-muted mb-0">
+                                                    Certificate ID: {{ assignment.certificate.certificate_id }}
+                                                </p>
+                                            </div>
+                                            <div class="text-end">
+                                                <a href="{% url 'training:view_certificate' assignment.certificate.pk %}" 
+                                                   class="btn btn-sm btn-outline-success mb-1" 
+                                                   title="View Certificate">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                <a href="{% url 'training:download_certificate' assignment.certificate.pk %}" 
+                                                   class="btn btn-sm btn-success" 
+                                                   title="Download Certificate">
+                                                    <i class="bi bi-download"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Failed Assignments -->
+        {% if failed_assignments %}
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Failed Assignments</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for assignment in failed_assignments %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ assignment.course.title }}</h6>
+                                        <p class="mb-1 text-muted">{{ assignment.course.description|truncatewords:15 }}</p>
+                                        <small class="text-muted">
+                                            Assigned: {{ assignment.assigned_date|date:"M d, Y" }}
+                                        </small>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-danger">Failed</span>
+                                        <a href="{% url 'training:assignment_detail' assignment.pk %}" 
+                                           class="btn btn-sm btn-outline-danger ms-2">
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Empty State -->
+        {% if not assignments %}
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-journal-x display-1 text-muted"></i>
+                    <h4 class="mt-3">No Training Assigned</h4>
+                    <p class="text-muted">You haven't been assigned any training courses yet.</p>
+                    <p class="text-muted">Contact your coordinator or administrator to get started.</p>
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

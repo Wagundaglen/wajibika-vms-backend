@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">{{ title }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <p class="mb-0">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.volunteer.id_for_label }}" class="form-label">Volunteer</label>
+                            {{ form.volunteer }}
+                            {% if form.volunteer.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.volunteer.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Select the volunteer to assign this training to.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.course.id_for_label }}" class="form-label">Training Course</label>
+                            {{ form.course }}
+                            {% if form.course.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.course.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Select the training course to assign.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.due_date.id_for_label }}" class="form-label">Due Date</label>
+                            {{ form.due_date }}
+                            {% if form.due_date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.due_date.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Optional: Set a due date for this training assignment.</div>
+                        </div>
+                        
+                        {% if assignment %}
+                            <div class="mb-3">
+                                <label class="form-label">Current Status</label>
+                                <div class="form-control-plaintext">
+                                    <span class="badge bg-{{ assignment.status|yesno:'success,primary,danger' }}">
+                                        {{ assignment.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Assigned By</label>
+                                <div class="form-control-plaintext">
+                                    {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username|default:"System" }}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Assigned Date</label>
+                                <div class="form-control-plaintext">
+                                    {{ assignment.assigned_date|date:"F d, Y, P" }}
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'training:assignment_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Assignments
+                            </a>
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle"></i> {{ action }}
+                                </button>
+                                {% if assignment %}
+                                    <a href="{% url 'training:assignment_detail' assignment.pk %}" class="btn btn-outline-secondary ms-2">
+                                        Cancel
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            {% if assignment %}
+                <div class="card shadow mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">Training Progress</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if assignment.progress.all %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Module</th>
+                                            <th>Status</th>
+                                            <th>Started</th>
+                                            <th>Completed</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for progress in assignment.progress.all %}
+                                            <tr>
+                                                <td>{{ progress.module.title }}</td>
+                                                <td>
+                                                    {% if progress.is_completed %}
+                                                        <span class="badge bg-success">Completed</span>
+                                                    {% elif progress.started_at %}
+                                                        <span class="badge bg-warning">In Progress</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Not Started</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if progress.started_at %}
+                                                        {{ progress.started_at|date:"M d, Y" }}
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if progress.completed_at %}
+                                                        {{ progress.completed_at|date:"M d, Y" }}
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="mb-0">No progress records found for this assignment.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    // Add Bootstrap classes to form fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const formFields = document.querySelectorAll('select, input[type="datetime-local"]');
+        formFields.forEach(function(field) {
+            field.classList.add('form-select');
+            if (field.tagName === 'INPUT') {
+                field.classList.remove('form-select');
+                field.classList.add('form-control');
+            }
+        });
+    });
+</script>
+{% endblock %}

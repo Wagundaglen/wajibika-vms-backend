@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate of Completion</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Open+Sans:wght@400;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background: #f8f9fa;
+            color: #333;
+        }
+        
+        .certificate {
+            width: 210mm;
+            height: 297mm;
+            padding: 20mm;
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .certificate::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="none" stroke="%2328c7d" stroke-width="0.5"/></svg>');
+            opacity: 0.1;
+            z-index: 1;
+        }
+        
+        .certificate-content {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .title {
+            font-family: 'Playfair Display', serif;
+            font-size: 36px;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            color: #6c757d;
+            margin-bottom: 30px;
+        }
+        
+        .recipient {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .recipient-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            color: #007bff;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .course-info {
+            text-align: center;
+            margin: 20px 0 40px;
+        }
+        
+        .course-title {
+            font-size: 24px;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        
+        .course-description {
+            font-size: 16px;
+            color: #6c757d;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+        
+        .details {
+            display: flex;
+            justify-content: space-between;
+            margin: 40px 0;
+        }
+        
+        .details-left, .details-right {
+            width: 45%;
+        }
+        
+        .detail-item {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 40px;
+        }
+        
+        .issuer, .verification {
+            width: 45%;
+        }
+        
+        .issuer-title, .verification-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        
+        .border-top {
+            border-top: 1px solid #dee2e6;
+            padding-top: 5px;
+        }
+        
+        .seal {
+            position: absolute;
+            top: 50%;
+            right: 40px;
+            transform: translateY(-50%);
+            width: 100px;
+            height: 100px;
+            border: 2px solid #28a745;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #28a745;
+            font-weight: bold;
+            font-size: 12px;
+            text-align: center;
+            opacity: 0.8;
+        }
+        
+        @page {
+            margin: 0;
+            size: A4;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="certificate">
+        <div class="certificate-content">
+            <div class="header">
+                <div class="title">Certificate of Completion</div>
+                <div class="subtitle">This is to certify that</div>
+            </div>
+            
+            <div class="recipient">
+                <div class="recipient-name">{{ certificate.assignment.volunteer.get_full_name|default:certificate.assignment.volunteer.username }}</div>
+            </div>
+            
+            <div class="course-info">
+                <div class="course-title">{{ certificate.assignment.course.title }}</div>
+                <div class="course-description">{{ certificate.assignment.course.description }}</div>
+            </div>
+            
+            <div class="details">
+                <div class="details-left">
+                    <div class="detail-item">
+                        <span class="detail-label">Certificate ID:</span> {{ certificate.certificate_id }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Date Issued:</span> {{ certificate.issued_date|date:"F d, Y" }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Duration:</span> {{ certificate.assignment.course.duration }}
+                    </div>
+                </div>
+                <div class="details-right">
+                    <div class="detail-item">
+                        <span class="detail-label">Modules Completed:</span> {{ certificate.assignment.progress.all|length }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Completion Date:</span> {{ certificate.assignment.progress.last.completed_at|date:"F d, Y" }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Status:</span> Completed
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <div class="issuer">
+                    <div class="issuer-title">Issued by</div>
+                    <div class="border-top">
+                        Wajibika Initiative<br>
+                        {{ certificate.assigned_by.get_full_name|default:certificate.assigned_by.username|default:"System" }}
+                    </div>
+                </div>
+                <div class="verification">
+                    <div class="verification-title">Verification Code</div>
+                    <div class="border-top">
+                        {{ certificate.certificate_id }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="seal">
+            <div>VERIFIED</div>
+            <div>✓</div>
+        </div>
+    </div>
+</body>
+</html>
