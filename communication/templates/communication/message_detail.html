@@ -1,0 +1,47 @@
+{% extends 'communication/base.html' %}
+{% load static %}
+
+{% block title %}Message: {{ message.subject }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Message</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group mr-2">
+                <a href="{% url 'volunteer_communication:messages' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Messages
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">{{ message.subject }}</h5>
+        </div>
+        <div class="card-body">
+            <p class="card-text">{{ message.body }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted">
+                        {% if message.sender == user %}
+                        To: {{ message.recipient.get_full_name|default:message.recipient.username }}
+                        {% else %}
+                        From: {{ message.sender.get_full_name|default:message.sender.username }}
+                        {% endif %}
+                    </small><br>
+                    <small class="text-muted">{{ message.timestamp|date:"F d, Y g:i A" }}</small>
+                </div>
+                <div>
+                    {% if message.sender != user %}
+                    <a href="{% url 'volunteer_communication:message_create' %}?recipient={{ message.sender.pk }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-reply"></i> Reply
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

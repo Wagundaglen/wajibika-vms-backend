@@ -1,0 +1,119 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Log Hours{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Log Hours</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group mr-2">
+                <a href="{% url 'tasks:my_hours' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-clock"></i> My Hours
+                </a>
+                {% if task %}
+                <a href="{% url 'tasks:task_detail' task.pk %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Task
+                </a>
+                {% else %}
+                <a href="{% url 'tasks:task_list' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Tasks
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Log Hours for {% if task %}{{ task.title }}{% else %}a Task{% endif %}</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="{{ form.task.id_for_label }}">Task</label>
+                        {{ form.task }}
+                        {% if form.task.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.task.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="{{ form.date.id_for_label }}">Date</label>
+                        {{ form.date }}
+                        {% if form.date.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.date.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group col-md-6">
+                        <label for="{{ form.hours.id_for_label }}">Hours</label>
+                        {{ form.hours }}
+                        {% if form.hours.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.hours.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="{{ form.activity_type.id_for_label }}">Activity Type</label>
+                        {{ form.activity_type }}
+                        {% if form.activity_type.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.activity_type.errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Description</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.description.errors }}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Log Hours</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Available Tasks -->
+    {% if not task %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Your Available Tasks</h5>
+        </div>
+        <div class="card-body">
+            {% if available_tasks %}
+            <div class="list-group">
+                {% for task in available_tasks %}
+                <a href="{% url 'tasks:log_hours' %}?task={{ task.pk }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ task.title }}</h6>
+                        <small>{{ task.due_date|date:"M d, Y" }}</small>
+                    </div>
+                    <p class="mb-1">{{ task.description|truncatewords:20 }}</p>
+                    <small>Priority: {{ task.priority }}</small>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted">You have no available tasks to log hours for.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

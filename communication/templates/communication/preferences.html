@@ -1,0 +1,83 @@
+{% extends 'communication/base.html' %}
+{% load static %}
+
+{% block title %}Communication Preferences{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Communication Preferences</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group mr-2">
+                <a href="{% url 'volunteer_communication:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Notification Settings</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group form-check">
+                    {{ form.email_notifications }}
+                    <label class="form-check-label" for="{{ form.email_notifications.id_for_label }}">
+                        Email Notifications
+                    </label>
+                    <small class="form-text text-muted">Receive notifications via email</small>
+                </div>
+                
+                <div class="form-group form-check">
+                    {{ form.sms_notifications }}
+                    <label class="form-check-label" for="{{ form.sms_notifications.id_for_label }}">
+                        SMS Notifications
+                    </label>
+                    <small class="form-text text-muted">Receive notifications via SMS (requires phone number)</small>
+                </div>
+                
+                <div class="form-group form-check">
+                    {{ form.in_app_notifications }}
+                    <label class="form-check-label" for="{{ form.in_app_notifications.id_for_label }}">
+                        In-App Notifications
+                    </label>
+                    <small class="form-text text-muted">Receive notifications within the application</small>
+                </div>
+                
+                <hr>
+                
+                <h6>Specific Notifications</h6>
+                
+                <div class="form-group form-check">
+                    {{ form.event_reminders }}
+                    <label class="form-check-label" for="{{ form.event_reminders.id_for_label }}">
+                        Event Reminders
+                    </label>
+                    <small class="form-text text-muted">Receive reminders for upcoming events</small>
+                </div>
+                
+                <div class="form-group form-check">
+                    {{ form.announcement_alerts }}
+                    <label class="form-check-label" for="{{ form.announcement_alerts.id_for_label }}">
+                        Announcement Alerts
+                    </label>
+                    <small class="form-text text-muted">Receive alerts for new announcements</small>
+                </div>
+                
+                <div class="form-group form-check">
+                    {{ form.message_alerts }}
+                    <label class="form-check-label" for="{{ form.message_alerts.id_for_label }}">
+                        Message Alerts
+                    </label>
+                    <small class="form-text text-muted">Receive alerts for new messages</small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Save Preferences</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}My Hours{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">My Hours</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group mr-2">
+                <a href="{% url 'tasks:log_hours' %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Log Hours
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Total Approved Hours</div>
+                <div class="card-body">
+                    <h5 class="card-title display-4">{{ total_hours }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-header">Pending Approval</div>
+                <div class="card-body">
+                    <h5 class="card-title display-4">{{ pending_hours }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Filter Hours</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="form-row">
+                <div class="form-group col-md-4">
+                    <label for="month">Month</label>
+                    <select name="month" id="month" class="form-control">
+                        <option value="">All Months</option>
+                        <option value="1" {% if filter_month == '1' %}selected{% endif %}>January</option>
+                        <option value="2" {% if filter_month == '2' %}selected{% endif %}>February</option>
+                        <option value="3" {% if filter_month == '3' %}selected{% endif %}>March</option>
+                        <option value="4" {% if filter_month == '4' %}selected{% endif %}>April</option>
+                        <option value="5" {% if filter_month == '5' %}selected{% endif %}>May</option>
+                        <option value="6" {% if filter_month == '6' %}selected{% endif %}>June</option>
+                        <option value="7" {% if filter_month == '7' %}selected{% endif %}>July</option>
+                        <option value="8" {% if filter_month == '8' %}selected{% endif %}>August</option>
+                        <option value="9" {% if filter_month == '9' %}selected{% endif %}>September</option>
+                        <option value="10" {% if filter_month == '10' %}selected{% endif %}>October</option>
+                        <option value="11" {% if filter_month == '11' %}selected{% endif %}>November</option>
+                        <option value="12" {% if filter_month == '12' %}selected{% endif %}>December</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-4">
+                    <label for="year">Year</label>
+                    <select name="year" id="year" class="form-control">
+                        <option value="">All Years</option>
+                        {% for year in "2023,2024,2025"|split:"," %}
+                        <option value="{{ year }}" {% if filter_year == year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group col-md-4 align-self-end">
+                    <button type="submit" class="btn btn-primary btn-block">Apply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Monthly Hours Chart -->
+    {% if monthly_hours %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Monthly Hours</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="monthlyHoursChart" height="100"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Time Entries -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Time Entries</h5>
+        </div>
+        <div class="card-body">
+            {% if time_entries %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Task</th>
+                            <th>Hours</th>
+                            <th>Activity Type</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in time_entries %}
+                        <tr>
+                            <td>{{ entry.date|date:"M d, Y" }}</td>
+                            <td><a href="{% url 'tasks:task_detail' entry.task.pk %}">{{ entry.task.title }}</a></td>
+                            <td>{{ entry.hours }}</td>
+                            <td>{{ entry.get_activity_type_display }}</td>
+                            <td>{{ entry.description }}</td>
+                            <td>
+                                {% if entry.approved %}
+                                <span class="badge badge-success">Approved</span>
+                                {% else %}
+                                <span class="badge badge-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                <h4>No Time Entries Found</h4>
+                <p class="text-muted">You haven't logged any hours yet.</p>
+                <a href="{% url 'tasks:log_hours' %}" class="btn btn-primary">Log Hours</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if monthly_hours %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('monthlyHoursChart').getContext('2d');
+    
+    const monthlyHoursChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [
+                {% for item in monthly_hours %}
+                '{{ item.month|date:"F Y" }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Hours',
+                data: [
+                    {% for item in monthly_hours %}
+                    {{ item.total|floatformat:1 }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

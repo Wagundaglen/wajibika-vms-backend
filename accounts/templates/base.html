@@ -1,272 +1,357 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Volunteer Management System{% endblock %}</title>
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <!-- SEO and Meta Tags -->
+    <title>{% block title %}Wajibika Initiative - Volunteer Management System{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Wajibika Initiative - Volunteer Management System connecting volunteers with meaningful opportunities to make a difference in our communities{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}volunteer, community service, wajibika initiative, volunteer management, non-profit{% endblock %}">
+    <meta name="author" content="Wajibika Initiative">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta property="og:title" content="{% block og_title %}Wajibika Initiative - Volunteer Management System{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Wajibika Initiative - Volunteer Management System connecting volunteers with meaningful opportunities{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}{% static 'img/logo.jpg' %}{% endblock %}">
+    <meta property="og:site_name" content="Wajibika Initiative">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{ request.build_absolute_uri }}">
+    <meta property="twitter:title" content="{% block twitter_title %}Wajibika Initiative - Volunteer Management System{% endblock %}">
+    <meta property="twitter:description" content="{% block twitter_description %}Wajibika Initiative - Volunteer Management System connecting volunteers with meaningful opportunities{% endblock %}">
+    <meta property="twitter:image" content="{% block twitter_image %}{% static 'img/logo.jpg' %}{% endblock %}">
+    
+    <!-- Favicon and Icons -->
+    <link rel="icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
+    <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
+    <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
     
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <style>
-        body {
-            padding-top: 70px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        .navbar-brand {
-            font-weight: bold;
-            letter-spacing: 1px;
-            transition: transform 0.2s ease-in-out;
-        }
-        .navbar-brand:hover {
-            transform: scale(1.05);
-        }
-        .nav-link {
-            font-weight: 500;
-        }
-        .btn {
-            transition: all 0.2s ease-in-out;
-        }
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-        .fade-in {
-            animation: fadeIn 0.6s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .badge {
-            font-size: 0.7rem;
-        }
-    </style>
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-success fixed-top shadow-sm">
-    <div class="container">
-        <!-- Logo / Brand -->
-        <a class="navbar-brand" href="{% url 'home' %}">
-            <i class="bi bi-people-fill"></i> Wajibika Initiative
-        </a>
-        <!-- Mobile Toggle -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        
-        <!-- Nav Links -->
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">Home</a></li>
-                <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}" href="{% url 'about' %}">About Us</a></li>
-                <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'volunteer' %}active{% endif %}" href="{% url 'volunteer' %}">Volunteer</a></li>
-                <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'donate' %}active{% endif %}" href="{% url 'donate' %}">Donate</a></li>
-                <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}" href="{% url 'contact' %}">Contact</a></li>
-                
-                {% if user.is_authenticated %}
-                <!-- Dashboard -->
-                <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name in 'admin_dashboard coordinator_dashboard volunteer_dashboard' %}active{% endif %}" href="{% url 'dashboard_redirect' %}">
-                        Dashboard
-                    </a>
-                </li>
-                
-                <!-- Training -->
-                <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'my_training' or request.resolver_match.url_name == 'team_progress' or request.resolver_match.url_name == 'volunteer_dashboard' %}active{% endif %}" 
-                       href="{% if user.is_staff %}{% url 'training:course_list' %}{% elif user.groups.all.0.name == 'Coordinator' %}{% url 'training:team_progress' %}{% else %}{% url 'training:volunteer_dashboard' %}{% endif %}">
-                       Training
-                    </a>
-                </li>
-                
-                <!-- Feedback -->
-                <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'feedback_dashboard' %}active{% endif %}" 
-                    href="{% url 'feedback:feedback_dashboard' %}">
-                        Feedback
-                    </a>
-                </li>
-                
-                <!-- Recognition Dropdown -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="recognitionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Recognition
-                        {% if user_badges %}
-                            <span class="badge bg-warning text-dark">{{ user_badges|length }}</span>
-                        {% endif %}
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="recognitionDropdown">
-                        <li>
-                            <a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'recognition:dashboard' %}">
-                                <span>Recognition Dashboard</span>
-                                <i class="bi bi-award-fill text-success"></i>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <div class="px-3 py-2">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>Points:</span>
-                                    <strong class="text-primary">{{ total_points }}</strong>
-                                </div>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>Badges:</span>
-                                    <strong class="text-success">{{ user_badges|length }}</strong>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Rank:</span>
-                                    <strong class="text-info">#{{ user_rank|default:"N/A" }}</strong>
-                                </div>
-                            </div>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        {% if user.role == 'Admin' %}
-                        <li>
-                            <a class="dropdown-item d-flex justify-content-between align-items-center" href="/admin/recognition/">
-                                <span>Admin Recognition Models</span>
-                                <i class="bi bi-gear-fill text-secondary"></i>
-                            </a>
-                        </li>
-                        {% endif %}
-                        {% if user.role in 'Admin,Coordinator' %}
-                        <li>
-                            <a class="dropdown-item d-flex justify-content-between align-items-center" href="/admin/recognition/recognition/add/">
-                                <span>Give Recognition</span>
-                                <i class="bi bi-plus-circle-fill text-primary"></i>
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </li>
-                
-                <!-- Communication Dropdown -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="commDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Communication
-                        {% if unread_inbox > 0 or unread_notifications > 0 %}
-                            <span class="badge bg-warning text-dark">{{ unread_inbox|add:unread_notifications }}</span>
-                        {% endif %}
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="commDropdown">
-                        <li>
-                            <a class="dropdown-item d-flex justify-content-between" href="{% url 'inbox' %}">
-                                Inbox
-                                {% if unread_inbox > 0 %}
-                                    <span class="badge bg-primary">{{ unread_inbox }}</span>
-                                {% endif %}
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{% url 'sent_messages' %}">Sent Messages</a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex justify-content-between" href="{% url 'notifications_list' %}">
-                                Notifications
-                                {% if unread_notifications > 0 %}
-                                    <span class="badge bg-danger">{{ unread_notifications }}</span>
-                                {% endif %}
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-                {% endif %}
-            </ul>
+    <!-- CSRF Token -->
+    {% csrf_token %}
+    
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-link visually-hidden-focusable">Skip to main content</a>
+    <!-- Header -->
+    <header class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+                <div class="brand-logo me-2">
+                    <i class="fas fa-hands-helping"></i>
+                </div>
+                <div>
+                    <span class="brand-name">Wajibika Initiative</span>
+                    <small class="d-block brand-tagline">Volunteer Management System</small>
+                </div>
+            </a>
             
-            <!-- Auth Buttons -->
-            <div class="d-flex align-items-center gap-2">
-                {% if user.is_authenticated %}
-                    <a href="{% url 'profile_page' %}" class="btn btn-light btn-sm">
-                        <i class="bi bi-person-circle"></i> Profile
-                    </a>
-                    <a href="{% url 'logout_user' %}" class="btn btn-danger btn-sm">
-                        <i class="bi bi-box-arrow-right"></i> Logout
-                    </a>
-                {% else %}
-                    <a href="{% url 'login_form' %}" class="btn btn-light btn-sm">
-                        <i class="bi bi-box-arrow-in-right"></i> Login
-                    </a>
-                    <a href="{% url 'register_form' %}" class="btn btn-warning btn-sm text-dark">
-                        <i class="bi bi-person-plus"></i> Register
-                    </a>
-                {% endif %}
-                <!-- Dark Mode Toggle -->
-                <button id="themeToggle" class="btn btn-outline-light btn-sm" title="Toggle Dark Mode">
-                    <i class="bi bi-moon-stars-fill"></i>
-                </button>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}" aria-current="{% if request.resolver_match.url_name == 'home' %}page{% endif %}">
+                            <i class="fas fa-home me-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}" href="{% url 'about' %}" aria-current="{% if request.resolver_match.url_name == 'about' %}page{% endif %}">
+                            <i class="fas fa-info-circle me-1"></i> About
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'volunteer' %}active{% endif %}" href="{% url 'volunteer' %}" aria-current="{% if request.resolver_match.url_name == 'volunteer' %}page{% endif %}">
+                            <i class="fas fa-hands-helping me-1"></i> Volunteer
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'donate' %}active{% endif %}" href="{% url 'donate' %}" aria-current="{% if request.resolver_match.url_name == 'donate' %}page{% endif %}">
+                            <i class="fas fa-donate me-1"></i> Donate
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}" href="{% url 'contact' %}" aria-current="{% if request.resolver_match.url_name == 'contact' %}page{% endif %}">
+                            <i class="fas fa-envelope me-1"></i> Contact
+                        </a>
+                    </li>
+                    
+                    <!-- Role-specific Navigation -->
+                    {% if user.is_authenticated %}
+                        {% if user.role == 'Coordinator' %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if request.resolver_match.url_name == 'coordinator_dashboard' %}active{% endif %}" href="#" id="coordinatorDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-tasks me-1"></i> Coordinator
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="coordinatorDropdown">
+                                <li><a class="dropdown-item" href="{% url 'coordinator_dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a></li>
+                                <li><a class="dropdown-item" href="{% url 'create_task' %}"><i class="fas fa-plus me-2"></i> Create Task</a></li>
+                                <li><a class="dropdown-item" href="{% url 'manage_users' %}"><i class="fas fa-users me-2"></i> Manage Volunteers</a></li>
+                            </ul>
+                        </li>
+                        {% elif user.role == 'Volunteer' %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'volunteer_dashboard' %}active{% endif %}" href="{% url 'volunteer_dashboard' %}" aria-current="{% if request.resolver_match.url_name == 'volunteer_dashboard' %}page{% endif %}">
+                                <i class="fas fa-tachometer-alt me-1"></i> My Dashboard
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+                
+                <!-- Notifications and User Authentication Section -->
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <!-- Notifications Dropdown -->
+                        <li class="nav-item dropdown me-2">
+                            <a class="nav-link dropdown-toggle position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
+                                <i class="fas fa-bell"></i>
+                                {% if notifications and notifications.count > 0 %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ notifications.count }}
+                                        <span class="visually-hidden">unread notifications</span>
+                                    </span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                                <li><h6 class="dropdown-header">Notifications</h6></li>
+                                {% if notifications %}
+                                    {% for notification in notifications %}
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center" href="{{ notification.link|default:'#' }}">
+                                            <div class="flex-shrink-0">
+                                                {% if notification.type == 'feedback' %}
+                                                    <i class="fas fa-comment-dots text-primary me-2"></i>
+                                                {% elif notification.type == 'communication' %}
+                                                    <i class="fas fa-comments text-info me-2"></i>
+                                                {% elif notification.type == 'task' %}
+                                                    <i class="fas fa-tasks text-warning me-2"></i>
+                                                {% elif notification.type == 'training' %}
+                                                    <i class="fas fa-graduation-cap text-success me-2"></i>
+                                                {% elif notification.type == 'recognition' %}
+                                                    <i class="fas fa-award text-danger me-2"></i>
+                                                {% else %}
+                                                    <i class="fas fa-bell text-secondary me-2"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1 ms-2">
+                                                <div>{{ notification.message|default:'You have a new notification' }}</div>
+                                                <small class="text-muted">{{ notification.timestamp|timesince|default:'just now' }} ago</small>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li><span class="dropdown-item-text">No new notifications</span></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-center" href="#">View All Notifications</a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- User Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="User menu">
+                                {% if user.profile and user.profile.profile_picture %}
+                                    <img src="{{ user.profile.profile_picture.url }}" class="rounded-circle me-2" width="32" height="32" alt="Profile picture of {{ user.get_full_name|default:user.username }}">
+                                {% else %}
+                                    <div class="rounded-circle bg-white bg-opacity-25 d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                        <span class="text-white fw-bold" style="font-size: 12px;">
+                                            {% if user.first_name and user.last_name %}
+                                                {{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
+                                            {% else %}
+                                                {{ user.username|slice:":2"|upper }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                                <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="{% url 'dashboard_redirect' %}"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a></li>
+                                <li><a class="dropdown-item" href="{% url 'profile_page' %}"><i class="fas fa-user me-2"></i> Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'edit_profile' %}"><i class="fas fa-edit me-2"></i> Edit Profile</a></li>
+                                {% if user.role == 'Coordinator' %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'settings_module' %}"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="{% url 'logout_user' %}"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login_form' %}">
+                                <i class="fas fa-sign-in-alt me-1"></i> Login
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'register_form' %}">
+                                <i class="fas fa-user-plus me-1"></i> Register
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
             </div>
         </div>
-    </div>
-</nav>
-
-<!-- Messages -->
-<div class="container mt-4 fade-in">
+    </header>
+    <!-- Messages -->
     {% if messages %}
+    <div class="container mt-3">
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show animate__animated animate__fadeInDown" role="alert">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        {% if message.tags == 'success' %}
+                            <i class="fas fa-check-circle me-2"></i>
+                        {% elif message.tags == 'error' %}
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                        {% elif message.tags == 'warning' %}
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                        {% elif message.tags == 'info' %}
+                            <i class="fas fa-info-circle me-2"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        {{ message }}
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
             </div>
         {% endfor %}
-    {% endif %}
-</div>
-
-<!-- Page Content -->
-<div class="container mt-3 fade-in">
-    {% block content %}{% endblock %}
-</div>
-
-<!-- Footer -->
-<footer class="bg-success text-white py-4 mt-5">
-  <div class="container text-center">
-    <h5>Connect with Wajibika Initiative</h5>
-    <div class="d-flex justify-content-center gap-4 fs-4 mt-3">
-      <a href="https://facebook.com/YourPage" target="_blank" class="text-white" aria-label="Facebook" rel="noopener noreferrer">
-        <i class="bi bi-facebook"></i>
-      </a>
-      <a href="https://twitter.com/YourProfile" target="_blank" class="text-white" aria-label="Twitter" rel="noopener noreferrer">
-        <i class="bi bi-twitter"></i>
-      </a>
-      <a href="https://instagram.com/YourProfile" target="_blank" class="text-white" aria-label="Instagram" rel="noopener noreferrer">
-        <i class="bi bi-instagram"></i>
-      </a>
-      <a href="https://linkedin.com/company/YourCompany" target="_blank" class="text-white" aria-label="LinkedIn" rel="noopener noreferrer">
-        <i class="bi bi-linkedin"></i>
-      </a>
-      <a href="mailto:info@wajibika.org" class="text-white" aria-label="Email">
-        <i class="bi bi-envelope"></i>
-      </a>
     </div>
-    <p class="mt-3 mb-0 small">&copy; {% now "Y" %} Wajibika Initiative. All rights reserved.</p>
-  </div>
-</footer>
-
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Dark Mode Toggle Script -->
-<script>
-    const themeToggle = document.getElementById("themeToggle");
-    const htmlElement = document.documentElement;
-    const savedTheme = localStorage.getItem("theme") || "light";
-    htmlElement.setAttribute("data-bs-theme", savedTheme);
-    updateThemeIcon(savedTheme);
+    {% endif %}
+    <!-- Main Content -->
+    <main id="main-content" class="container my-4">
+        {% block content %}{% endblock %}
+    </main>
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5 class="mb-3">
+                        <i class="fas fa-hands-helping me-2"></i>Wajibika Initiative
+                    </h5>
+                    <p class="mb-3">Connecting volunteers with meaningful opportunities to make a difference in our communities.</p>
+                    <p class="mb-0 small text-white-50">Empowering communities through volunteer service since {% now "Y" %}</p>
+                </div>
+                <div class="col-md-4">
+                    <h5 class="mb-3">Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="{% url 'home' %}" class="text-white-50 text-decoration-none hover-text-white"><i class="fas fa-chevron-right me-1"></i> Home</a></li>
+                        <li class="mb-2"><a href="{% url 'about' %}" class="text-white-50 text-decoration-none hover-text-white"><i class="fas fa-chevron-right me-1"></i> About Us</a></li>
+                        <li class="mb-2"><a href="{% url 'volunteer' %}" class="text-white-50 text-decoration-none hover-text-white"><i class="fas fa-chevron-right me-1"></i> Volunteer</a></li>
+                        <li class="mb-2"><a href="{% url 'donate' %}" class="text-white-50 text-decoration-none hover-text-white"><i class="fas fa-chevron-right me-1"></i> Donate</a></li>
+                        <li class="mb-2"><a href="{% url 'contact' %}" class="text-white-50 text-decoration-none hover-text-white"><i class="fas fa-chevron-right me-1"></i> Contact</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5 class="mb-3">Contact Us</h5>
+                    <address class="mb-3">
+                        <div class="mb-2">
+                            <i class="fas fa-map-marker-alt me-2"></i>
+                            <span>123 Volunteer Street, Community City, CC 12345</span>
+                        </div>
+                        <div class="mb-2">
+                            <i class="fas fa-phone me-2"></i>
+                            <a href="tel:+1234567890" class="text-white-50 text-decoration-none hover-text-white">(123) 456-7890</a>
+                        </div>
+                        <div class="mb-2">
+                            <i class="fas fa-envelope me-2"></i>
+                            <a href="mailto:info@wajibika.org" class="text-white-50 text-decoration-none hover-text-white">info@wajibika.org</a>
+                        </div>
+                    </address>
+                    <div class="mt-3">
+                        <h6 class="mb-2">Follow Us</h6>
+                        <div class="d-flex gap-3">
+                            <a href="#" class="text-white hover-text-primary" aria-label="Facebook">
+                                <i class="fab fa-facebook-f fa-lg"></i>
+                            </a>
+                            <a href="#" class="text-white hover-text-info" aria-label="Twitter">
+                                <i class="fab fa-twitter fa-lg"></i>
+                            </a>
+                            <a href="#" class="text-white hover-text-danger" aria-label="Instagram">
+                                <i class="fab fa-instagram fa-lg"></i>
+                            </a>
+                            <a href="#" class="text-white hover-text-primary" aria-label="LinkedIn">
+                                <i class="fab fa-linkedin-in fa-lg"></i>
+                            </a>
+                            <a href="#" class="text-white hover-text-danger" aria-label="YouTube">
+                                <i class="fab fa-youtube fa-lg"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4 bg-white">
+            <div class="text-center">
+                <p class="mb-0">&copy; {% now "Y" %} Wajibika Initiative. All rights reserved.</p>
+                <p class="mb-0 small text-white-50">Designed and developed with <i class="fas fa-heart text-danger"></i> for our community</p>
+                <div class="mt-2">
+                    <a href="#" class="text-white-50 text-decoration-none me-3 small">Privacy Policy</a>
+                    <a href="#" class="text-white-50 text-decoration-none me-3 small">Terms of Service</a>
+                    <a href="#" class="text-white-50 text-decoration-none small">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- Back to Top Button -->
+    <button id="backToTop" class="btn btn-primary btn-sm position-fixed bottom-0 end-0 m-3" style="display: none;" aria-label="Back to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    themeToggle.addEventListener("click", () => {
-        const currentTheme = htmlElement.getAttribute("data-bs-theme");
-        const newTheme = currentTheme === "light" ? "dark" : "light";
-        htmlElement.setAttribute("data-bs-theme", newTheme);
-        localStorage.setItem("theme", newTheme);
-        updateThemeIcon(newTheme);
-    });
+    <!-- Custom JavaScript -->
+    <script src="{% static 'js/main.js' %}"></script>
     
-    function updateThemeIcon(theme) {
-        themeToggle.innerHTML = theme === "light" 
-            ? '<i class="bi bi-moon-stars-fill"></i>' 
-            : '<i class="bi bi-brightness-high-fill"></i>';
-    }
-</script>
+    {% block extra_js %}{% endblock %}
+    <script>
+        // Back to top button functionality
+        window.addEventListener('scroll', function() {
+            const backToTopButton = document.getElementById('backToTop');
+            if (window.pageYOffset > 300) {
+                backToTopButton.style.display = 'block';
+            } else {
+                backToTopButton.style.display = 'none';
+            }
+        });
+        document.getElementById('backToTop').addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        // Add smooth scrolling to all links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>

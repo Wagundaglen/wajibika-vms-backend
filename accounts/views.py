@@ -5,6 +5,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q, Count
+from django.utils import timezone
+from datetime import timedelta
 from tasks.models import Task
 from tasks.forms import TaskForm
 from .forms import VolunteerRegistrationForm, EditProfileForm
@@ -108,13 +112,13 @@ def edit_user(request, user_id):
     """Admins/Coordinators edit another user's profile"""
     if request.user.role not in ["Admin", "Coordinator"]:
         raise PermissionDenied("You are not authorized to edit users.")
-
+    
     user_obj = get_object_or_404(User, id=user_id)
-
+    
     # Coordinators can only edit Volunteers
     if request.user.role == "Coordinator" and user_obj.role != "Volunteer":
         raise PermissionDenied("Coordinators can only edit volunteers.")
-
+    
     if request.method == "POST":
         form = EditProfileForm(request.POST, request.FILES, instance=user_obj)
         if form.is_valid():
@@ -125,8 +129,8 @@ def edit_user(request, user_id):
             messages.error(request, "⚠️ Please correct the errors below.")
     else:
         form = EditProfileForm(instance=user_obj)
-
-    return render(request, "accounts/edit_profile.html", {
+    
+    return render(request, "accounts/edit_user.html", {
         "form": form,
         "user_obj": user_obj,
         "is_editing_other_user": True
@@ -141,26 +145,132 @@ def logout_user(request):
 # ---------- Dashboard Views ----------
 @login_required
 def admin_dashboard(request):
-    return render(request, "dashboards/admin_dashboard.html")
+    # Get statistics for admin dashboard
+    total_users = User.objects.count()
+    active_users = User.objects.filter(is_active=True).count()
+    new_users_last_week = User.objects.filter(date_joined__gte=timezone.now() - timedelta(days=7)).count()
+    
+    # Task statistics
+    total_tasks = Task.objects.count()
+    pending_tasks = Task.objects.filter(status='Pending').count()
+    in_progress_tasks = Task.objects.filter(status='In Progress').count()
+    completed_tasks = Task.objects.filter(status='Completed').count()
+    
+    # Role counts
+    volunteer_count = User.objects.filter(role='Volunteer').count()
+    coordinator_count = User.objects.filter(role='Coordinator').count()
+    
+    # Recent activities
+    recent_users = User.objects.order_by('-date_joined')[:5]
+    recent_tasks = Task.objects.order_by('-created_at')[:5]
+    
+    # Additional counts for dashboard
+    active_volunteers_week = User.objects.filter(
+        role='Volunteer', 
+        last_login__gte=timezone.now() - timedelta(days=7)
+    ).count()
+    active_coordinators = User.objects.filter(
+        role='Coordinator', 
+        last_login__gte=timezone.now() - timedelta(days=7)
+    ).count()
+    due_today_tasks = Task.objects.filter(
+        due_date=timezone.now().date(),
+        status__in=['Pending', 'In Progress']
+    ).count()
+    
+    # Placeholder variables for other features
+    pending_hours_count = 0
+    unread_count = 0
+    training_notifications_count = 0
+    user_badges = []
+    
+    context = {
+        'total_users': total_users,
+        'active_users': active_users,
+        'new_users_last_week': new_users_last_week,
+        'total_tasks': total_tasks,
+        'pending_tasks': pending_tasks,
+        'in_progress_tasks': in_progress_tasks,
+        'completed_tasks': completed_tasks,
+        'volunteer_count': volunteer_count,
+        'coordinator_count': coordinator_count,
+        'recent_users': recent_users,
+        'recent_tasks': recent_tasks,
+        'active_volunteers_week': active_volunteers_week,
+        'active_coordinators': active_coordinators,
+        'due_today_tasks': due_today_tasks,
+        'pending_hours_count': pending_hours_count,
+        'unread_count': unread_count,
+        'training_notifications_count': training_notifications_count,
+        'user_badges': user_badges,
+        'show_manage_users': True,
+    }
+    return render(request, "dashboards/admin_dashboard.html", context)
 
 @login_required
 def coordinator_dashboard(request):
-    return render(request, "dashboards/coordinator_dashboard.html")
+    # Get statistics for coordinator dashboard
+    total_volunteers = User.objects.filter(role='Volunteer').count()
+    active_volunteers = User.objects.filter(role='Volunteer', is_active=True).count()
+    
+    # Task statistics for coordinator's volunteers
+    volunteer_tasks = Task.objects.filter(assigned_to__role='Volunteer')
+    total_tasks = volunteer_tasks.count()
+    pending_tasks = volunteer_tasks.filter(status='Pending').count()
+    in_progress_tasks = volunteer_tasks.filter(status='In Progress').count()
+    completed_tasks = volunteer_tasks.filter(status='Completed').count()
+    
+    # Recent activities
+    recent_volunteers = User.objects.filter(role='Volunteer').order_by('-date_joined')[:5]
+    recent_tasks = volunteer_tasks.order_by('-created_at')[:5]
+    
+    context = {
+        'total_volunteers': total_volunteers,
+        'active_volunteers': active_volunteers,
+        'total_tasks': total_tasks,
+        'pending_tasks': pending_tasks,
+        'in_progress_tasks': in_progress_tasks,
+        'completed_tasks': completed_tasks,
+        'recent_volunteers': recent_volunteers,
+        'recent_tasks': recent_tasks,
+        'show_manage_users': True,
+    }
+    return render(request, "dashboards/coordinator_dashboard.html", context)
 
 @login_required
 def volunteer_dashboard(request):
-    return render(request, "dashboards/volunteer_dashboard.html")
+    # Get statistics for volunteer dashboard
+    user_tasks = Task.objects.filter(assigned_to=request.user)
+    total_tasks = user_tasks.count()
+    pending_tasks = user_tasks.filter(status='Pending').count()
+    in_progress_tasks = user_tasks.filter(status='In Progress').count()
+    completed_tasks = user_tasks.filter(status='Completed').count()
+    
+    # Recent activities
+    recent_tasks = user_tasks.order_by('-created_at')[:5]
+    
+    context = {
+        'total_tasks': total_tasks,
+        'pending_tasks': pending_tasks,
+        'in_progress_tasks': in_progress_tasks,
+        'completed_tasks': completed_tasks,
+        'recent_tasks': recent_tasks,
+        'show_manage_users': False,
+    }
+    return render(request, "dashboards/volunteer_dashboard.html", context)
 
 @login_required
 def dashboard_redirect(request):
-    if request.user.role == "Admin":
-        return redirect("admin_dashboard")
-    elif request.user.role == "Coordinator":
-        return redirect("coordinator_dashboard")
-    elif request.user.role == "Volunteer":
-        return redirect("volunteer_dashboard")
-    else:
-        return redirect("profile_page")
+    if hasattr(request.user, 'role'):
+        if request.user.role == "Admin":
+            return redirect("admin_dashboard")
+        elif request.user.role == "Coordinator":
+            return redirect("coordinator_dashboard")
+        elif request.user.role == "Volunteer":
+            return redirect("volunteer_dashboard")
+    
+    # Fallback if role is not set
+    return redirect("profile_page")
 
 # ---------- Tasks Module ----------
 @login_required
@@ -171,7 +281,7 @@ def tasks_module(request):
         tasks = Task.objects.filter(assigned_to__role="Volunteer").order_by("-created_at")
     else:
         tasks = Task.objects.filter(assigned_to=request.user).order_by("-created_at")
-    return render(request, "modules/tasks.html", {"tasks": tasks})
+    return render(request, "tasks/tasks.html", {"tasks": tasks})
 
 @login_required
 def create_task(request):
@@ -235,7 +345,6 @@ def reject_task(request, task_id):
     return redirect("tasks_module")
 
 # ---------- Other Modules ----------
-
 @login_required
 def communication_module(request):
     return render(request, "modules/communication.html")
@@ -244,7 +353,6 @@ def communication_module(request):
 def training_module(request):
     return render(request, "modules/training.html")
 
-
 # ---------- Manage Users ----------
 @login_required
 def manage_users(request):
@@ -252,12 +360,98 @@ def manage_users(request):
         messages.error(request, "You are not authorized to access this page.")
         return redirect("dashboard_redirect")
     
+    # Get filter parameters
+    role_filter = request.GET.get('role', '')
+    status_filter = request.GET.get('status', '')
+    search_query = request.GET.get('search', '')
+    
+    # Start with all users
+    users = User.objects.all()
+    
+    # Apply filters
+    if role_filter:
+        users = users.filter(role=role_filter)
+    
+    if status_filter == 'active':
+        users = users.filter(is_active=True)
+    elif status_filter == 'inactive':
+        users = users.filter(is_active=False)
+    
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) | 
+            Q(first_name__icontains=search_query) | 
+            Q(last_name__icontains=search_query) | 
+            Q(email__icontains=search_query)
+        )
+    
+    # For Coordinators, only show Volunteers
     if request.user.role == "Coordinator":
-        users = User.objects.filter(role="Volunteer").order_by("-date_joined")
-    else:
-        users = User.objects.all().order_by("-date_joined")
+        users = users.filter(role="Volunteer")
+    
+    # Order by join date
+    users = users.order_by("-date_joined")
+    
+    # Pagination
+    page = request.GET.get('page', 1)
+    paginator = Paginator(users, 10)  # Show 10 users per page
+    
+    try:
+        users = paginator.page(page)
+    except PageNotAnInteger:
+        users = paginator.page(1)
+    except EmptyPage:
+        users = paginator.page(paginator.num_pages)
+    
+    # Get counts for dashboard
+    total_users = paginator.count
+    active_users = User.objects.filter(is_active=True).count()
+    inactive_users = User.objects.filter(is_active=False).count()
+    
+    # Role counts
+    role_counts = {
+        'Admin': User.objects.filter(role='Admin').count(),
+        'Coordinator': User.objects.filter(role='Coordinator').count(),
+        'Volunteer': User.objects.filter(role='Volunteer').count(),
+    }
+    
+    context = {
+        "users": users,
+        "total_users": total_users,
+        "active_users": active_users,
+        "inactive_users": inactive_users,
+        "role_counts": role_counts,
+        "current_role_filter": role_filter,
+        "current_status_filter": status_filter,
+        "current_search": search_query,
+        "page_title": "Manage Users",
+    }
+    return render(request, "accounts/manage_users.html", context)
 
-    return render(request, "modules/manage_users.html", {"users": users})
+@login_required
+def user_list(request):
+    # Get all users ordered by join date
+    users = User.objects.all().order_by("-date_joined")
+    
+    # Calculate statistics
+    total_users = users.count()
+    active_users = users.filter(is_active=True).count()
+    inactive_users = users.filter(is_active=False).count()
+    volunteer_users = users.filter(role='Volunteer').count()
+    admin_users = users.filter(role='Admin').count()
+    coordinator_users = users.filter(role='Coordinator').count()
+    
+    context = {
+        "users": users,
+        "total_users": total_users,
+        "active_users": active_users,
+        "inactive_users": inactive_users,
+        "volunteer_users": volunteer_users,
+        "admin_users": admin_users,
+        "coordinator_users": coordinator_users,
+        "page_title": "User List",
+    }
+    return render(request, "accounts/user_list.html", context)
 
 @login_required
 def toggle_user_status(request, user_id):

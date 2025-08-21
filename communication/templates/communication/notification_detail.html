@@ -1,0 +1,35 @@
+{% extends 'communication/base.html' %}
+{% load static %}
+
+{% block title %}Notification: {{ notification.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Notification</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group mr-2">
+                <a href="{% url 'volunteer_communication:notifications' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Notifications
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ notification.title }}</h5>
+            <span class="badge badge-{{ notification.level }}">{{ notification.level }}</span>
+        </div>
+        <div class="card-body">
+            <p class="card-text">{{ notification.message }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <small>Received: {{ notification.created_at|date:"F d, Y g:i A" }}</small>
+                {% if notification.link %}
+                <a href="{{ notification.link }}" class="btn btn-primary">View Details</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

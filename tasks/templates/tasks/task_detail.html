@@ -1,0 +1,164 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}Task: {{ task.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Task Details</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group mr-2">
+                <a href="{% url 'tasks:task_list' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Tasks
+                </a>
+                {% if user.role == 'Admin' or user.role == 'Coordinator' %}
+                <a href="{% url 'tasks:edit_task' task.pk %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url 'tasks:delete_task' task.pk %}" class="btn btn-sm btn-outline-danger">
+                    <i class="fas fa-trash"></i> Delete
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ task.title }}</h5>
+            <div>
+                <span class="badge badge-{% if task.priority == 'High' %}danger{% elif task.priority == 'Medium' %}warning{% else %}info{% endif %}">
+                    {{ task.priority }} Priority
+                </span>
+                <span class="badge badge-{% if task.acceptance_status == 'Accepted' %}success{% elif task.acceptance_status == 'Rejected' %}danger{% else %}warning{% endif %}">
+                    {{ task.get_acceptance_status_display }}
+                </span>
+                {% if is_overdue %}
+                <span class="badge badge-danger">Overdue</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <p class="card-text">{{ task.description }}</p>
+                    
+                    <div class="task-details mt-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Assigned To:</strong> {{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</p>
+                                <p><strong>Created By:</strong> {{ task.created_by.get_full_name|default:task.created_by.username }}</p>
+                                <p><strong>Created At:</strong> {{ task.created_at|date:"F d, Y g:i A" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Due Date:</strong> {{ task.due_date|date:"F d, Y g:i A" }}</p>
+                                <p><strong>Status:</strong> {{ task.get_status_display }}</p>
+                                {% if task.category %}
+                                <p><strong>Category:</strong> {{ task.category.name }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between">
+                            <span>Progress</span>
+                            <span>{{ progress_percent }}%</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" style="width: {{ progress_percent }}%;" 
+                                 aria-valuenow="{{ progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                                {{ progress_percent }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Actions</h6>
+                        </div>
+                        <div class="card-body">
+                            {% if task.assigned_to == user %}
+                                {% if task.acceptance_status == 'Pending' %}
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'tasks:accept_task' task.pk %}" class="btn btn-success">
+                                        <i class="fas fa-check"></i> Accept Task
+                                    </a>
+                                    <a href="{% url 'tasks:reject_task' task.pk %}" class="btn btn-danger">
+                                        <i class="fas fa-times"></i> Reject Task
+                                    </a>
+                                </div>
+                                {% elif task.acceptance_status == 'Accepted' %}
+                                <div class="mb-3">
+                                    <form method="post" action="{% url 'tasks:update_task_status' task.pk %}">
+                                        {% csrf_token %}
+                                        <div class="form-group">
+                                            <label for="status">Update Status</label>
+                                            <select name="status" id="status" class="form-control">
+                                                {% for value, label in task.STATUS_CHOICES %}
+                                                <option value="{{ value }}" {% if task.status == value %}selected{% endif %}>{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary btn-block">Update Status</button>
+                                    </form>
+                                </div>
+                                <a href="{% url 'tasks:log_hours' %}?task={{ task.pk }}" class="btn btn-outline-primary btn-block">
+                                    <i class="fas fa-clock"></i> Log Hours
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer text-muted">
+            Last updated: {{ task.updated_at|date:"F d, Y g:i A" }}
+        </div>
+    </div>
+
+    <!-- Time Entries -->
+    {% if time_entries %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Time Entries</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Hours</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in time_entries %}
+                        <tr>
+                            <td>{{ entry.date|date:"M d, Y" }}</td>
+                            <td>{{ entry.hours }}</td>
+                            <td>{{ entry.description }}</td>
+                            <td>
+                                {% if entry.approved %}
+                                <span class="badge badge-success">Approved</span>
+                                {% else %}
+                                <span class="badge badge-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

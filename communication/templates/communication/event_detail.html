@@ -1,0 +1,69 @@
+{% extends 'communication/base.html' %}
+{% load static %}
+
+{% block title %}Event: {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Event</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group mr-2">
+                <a href="{% url 'volunteer_communication:events' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Events
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">{{ event.title }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <p class="card-text">{{ event.description }}</p>
+                    
+                    <div class="event-details">
+                        <p><i class="far fa-calendar"></i> <strong>Date:</strong> {{ event.start_time|date:"F d, Y" }}</p>
+                        <p><i class="far fa-clock"></i> <strong>Time:</strong> {{ event.start_time|date:"g:i A" }} - {{ event.end_time|date:"g:i A" }}</p>
+                        {% if event.location %}
+                        <p><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong> {{ event.location }}</p>
+                        {% endif %}
+                        <p><i class="fas fa-user"></i> <strong>Organizer:</strong> {{ event.organizer.get_full_name|default:event.organizer.username }}</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Attendance</h6>
+                        </div>
+                        <div class="card-body text-center">
+                            {% if event.is_upcoming %}
+                                {% if is_attending %}
+                                <p class="text-success"><i class="fas fa-check-circle"></i> You are attending this event</p>
+                                <a href="{% url 'volunteer_communication:rsvp_event' event.pk 'decline' %}" class="btn btn-outline-danger">Decline</a>
+                                {% else %}
+                                <p class="text-muted">Would you like to attend?</p>
+                                <a href="{% url 'volunteer_communication:rsvp_event' event.pk 'attend' %}" class="btn btn-primary">Attend</a>
+                                {% endif %}
+                            {% else %}
+                            <p class="text-muted">This event has already passed</p>
+                            {% endif %}
+                            
+                            <hr>
+                            
+                            <p><strong>Total Attendees:</strong> {{ event.attendees.count }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer text-muted">
+            Created on {{ event.created_at|date:"F d, Y" }} by {{ event.organizer.get_full_name|default:event.organizer.username }}
+        </div>
+    </div>
+</div>
+{% endblock %}

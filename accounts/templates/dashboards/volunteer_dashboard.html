@@ -1,104 +1,552 @@
-{% extends "base.html" %}
-{% block title %}Volunteer Dashboard{% endblock %}
-{% block content %}
-<div class="container my-5">
-    <h1 class="mb-4 text-success">Volunteer Dashboard</h1>
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Volunteer Dashboard - Wajibika Initiative{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        --info-gradient: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
+        --warning-gradient: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+    }
     
-    <div class="row g-4 mb-4">
-        <!-- My Profile -->
-        <div class="col-md-4">
-            <div class="card shadow border-0 h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-person-fill display-4 text-secondary"></i>
-                    <h5 class="mt-3">My Profile</h5>
-                    <p>Update your info, availability, and view logged hours.</p>
-                    <a href="{% url 'profile_page' %}" class="btn btn-outline-secondary">Go</a>
+    .dashboard-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    
+    .card-header-gradient {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 15px 15px 0 0 !important;
+    }
+    
+    .stats-card {
+        border-radius: 15px;
+        overflow: hidden;
+        border: none;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .stats-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+    }
+    
+    .icon-primary { background: rgba(102, 126, 234, 0.1); color: #667eea; }
+    .icon-success { background: rgba(17, 153, 142, 0.1); color: #11998e; }
+    .icon-info { background: rgba(33, 150, 243, 0.1); color: #2196F3; }
+    .icon-warning { background: rgba(242, 153, 74, 0.1); color: #f2994a; }
+    
+    .feature-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        margin: 0 auto 1rem;
+    }
+    
+    .btn-gradient {
+        border-radius: 30px;
+        padding: 0.6rem 1.8rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-primary-gradient {
+        background: var(--primary-gradient);
+        color: white;
+    }
+    
+    .btn-primary-gradient:hover {
+        background: var(--primary-gradient);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .activity-table {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .activity-table th {
+        background-color: #f8f9fa;
+        border: none;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .activity-table td {
+        border: none;
+        padding: 1rem;
+        vertical-align: middle;
+    }
+    
+    .welcome-header {
+        background: var(--primary-gradient);
+        color: white;
+        border-radius: 15px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .profile-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .initials-circle {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 18px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .table-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    
+    .table-initials {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Welcome Header -->
+    <div class="welcome-header d-sm-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="h2 mb-1">Volunteer Dashboard</h1>
+            <p class="mb-0 opacity-75">Welcome back, {{ user.get_full_name|default:user.username }}!</p>
+        </div>
+        <div class="d-flex align-items-center mt-3 mt-sm-0">
+            <div class="text-end">
+                <div class="fw-bold">{{ user.role|default:"Volunteer" }}</div>
+                <div class="small opacity-75">Last login: {{ user.last_login|date:"M d, Y H:i" }}</div>
+            </div>
+            <div class="ms-3">
+                <!-- Profile Picture or Initials -->
+                {% if user.profile and user.profile.profile_picture %}
+                    <img src="{{ user.profile.profile_picture.url }}" class="profile-avatar" alt="Profile">
+                {% else %}
+                    <div class="initials-circle">
+                        {% if user.first_name and user.last_name %}
+                            {{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}
+                        {% else %}
+                            {{ user.username|slice:":2"|upper }}
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <!-- My Tasks Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon icon-primary">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="text-muted small">My Tasks</div>
+                            <div class="h3 mb-0 fw-bold">{{ total_tasks }}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">Completed</span>
+                            <span class="text-primary">{{ completed_tasks }}</span>
+                        </div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: 60%"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <!-- My Training -->
-        <div class="col-md-4">
-            {% include "training/_volunteer_widget.html" %}
-        </div>
-        
-        <!-- My Certificates -->
-        <div class="col-md-4">
-            <div class="card shadow border-0 h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-award-fill display-4 text-warning"></i>
-                    <h5 class="mt-3">My Certificates</h5>
-                    <p>View and download your training certificates.</p>
-                    <div class="mt-3">
-                        <div class="row text-center">
-                            <div class="col-12">
-                                <div class="h5">{{ completed }}</div>
-                                <div class="small text-muted">Certificates Earned</div>
-                            </div>
+        <!-- Pending Tasks Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon icon-warning">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="text-muted small">Pending Tasks</div>
+                            <div class="h3 mb-0 fw-bold">{{ pending_tasks }}</div>
                         </div>
                     </div>
                     <div class="mt-3">
-                        <a href="{% url 'training:my_certificates' %}" class="btn btn-outline-warning">
-                            <i class="bi bi-award"></i> View Certificates
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">In Progress</span>
+                            <span class="text-warning">{{ in_progress_tasks }}</span>
+                        </div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: 40%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Completed Tasks Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon icon-success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="text-muted small">Completed</div>
+                            <div class="h3 mb-0 fw-bold">{{ completed_tasks }}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">Completion Rate</span>
+                            <span class="text-success">
+                                {% if total_tasks > 0 %}
+                                    {% widthratio completed_tasks total_tasks 100 %}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {% if total_tasks > 0 %}{% widthratio completed_tasks total_tasks 100 %}{% else %}0{% endif %}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Training Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stats-icon icon-info">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <div class="ms-3">
+                            <div class="text-muted small">Training</div>
+                            <div class="h3 mb-0 fw-bold">0</div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">Completed</span>
+                            <span class="text-info">0</span>
+                        </div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar bg-info" role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Cards -->
+    <div class="row mb-4">
+        <!-- My Tasks Card -->
+        <div class="col-lg-4 mb-4">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-gradient">
+                    <h5 class="mb-0">My Tasks</h5>
+                </div>
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon icon-primary">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <h5 class="mb-3">Task Management</h5>
+                    <p class="text-muted">View and manage your assigned tasks</p>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{% url 'tasks_module' %}" class="btn btn-primary-gradient">
+                            <i class="fas fa-tasks me-2"></i>My Tasks
+                        </a>
+                        {% if pending_tasks > 0 %}
+                        <div class="alert alert-warning d-flex align-items-center mt-2" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <div>{{ pending_tasks }} tasks pending</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Communication Card -->
+        <div class="col-lg-4 mb-4">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-gradient" style="background: var(--success-gradient);">
+                    <h5 class="mb-0">Communication</h5>
+                </div>
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon icon-success">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h5 class="mb-3">Communications Hub</h5>
+                    <p class="text-muted">View messages and announcements</p>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{% url 'communication_module' %}" class="btn btn-success">
+                            <i class="fas fa-comments me-2"></i>Messages
+                        </a>
+                        {% if unread_count > 0 %}
+                        <div class="alert alert-success d-flex align-items-center mt-2" role="alert">
+                            <i class="fas fa-envelope me-2"></i>
+                            <div>{{ unread_count }} unread messages</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Training Card -->
+        <div class="col-lg-4 mb-4">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-gradient" style="background: var(--info-gradient);">
+                    <h5 class="mb-0">Training</h5>
+                </div>
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon icon-info">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <h5 class="mb-3">Training Center</h5>
+                    <p class="text-muted">Access training courses and materials</p>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{% url 'training_module' %}" class="btn btn-info">
+                            <i class="fas fa-book me-2"></i>My Training
+                        </a>
+                        {% if training_notifications_count > 0 %}
+                        <div class="alert alert-info d-flex align-items-center mt-2" role="alert">
+                            <i class="fas fa-bell me-2"></i>
+                            <div>{{ training_notifications_count }} notifications</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Features Row -->
+    <div class="row mb-4">
+        <!-- Feedback Card -->
+        <div class="col-lg-4 mb-4">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-gradient" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);">
+                    <h5 class="mb-0">Feedback</h5>
+                </div>
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon" style="background: rgba(235, 51, 73, 0.1); color: #eb3349;">
+                        <i class="fas fa-comment-dots"></i>
+                    </div>
+                    <h5 class="mb-3">Feedback System</h5>
+                    <p class="text-muted">Submit feedback and view responses</p>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{% url 'feedback_module' %}" class="btn btn-danger">
+                            <i class="fas fa-comment-dots me-2"></i>Submit Feedback
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recognition Card -->
+        <div class="col-lg-4 mb-4">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-gradient" style="background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);">
+                    <h5 class="mb-0">Recognition</h5>
+                </div>
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon icon-warning">
+                        <i class="fas fa-award"></i>
+                    </div>
+                    <h5 class="mb-3">My Achievements</h5>
+                    <p class="text-muted">View your badges and recognition</p>
+                    <div class="d-grid gap-2 mt-4">
+                        <button class="btn btn-warning" disabled>
+                            <i class="fas fa-trophy me-2"></i>My Badges
+                        </button>
+                        {% if user_badges %}
+                        <div class="alert alert-warning d-flex align-items-center mt-2" role="alert">
+                            <i class="fas fa-certificate me-2"></i>
+                            <div>{{ user_badges|length }} badges earned</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Card -->
+        <div class="col-lg-4 mb-4">
+            <div class="card dashboard-card h-100">
+                <div class="card-header-gradient" style="background: var(--primary-gradient);">
+                    <h5 class="mb-0">Profile</h5>
+                </div>
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon icon-primary">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <h5 class="mb-3">My Profile</h5>
+                    <p class="text-muted">Update your personal information</p>
+                    <div class="d-grid gap-2 mt-4">
+                        <a href="{% url 'profile_page' %}" class="btn btn-primary-gradient">
+                            <i class="fas fa-user me-2"></i>View Profile
+                        </a>
+                        <a href="{% url 'edit_profile' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-edit me-2"></i>Edit Profile
                         </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <div class="row g-4 mb-4">
-        <!-- My Tasks -->
-        <div class="col-md-4">
-            <div class="card shadow border-0 h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-clipboard-check-fill display-4 text-warning"></i>
-                    <h5 class="mt-3">My Tasks</h5>
-                    <p>View and complete your assigned tasks.</p>
-                    <a href="{% url 'tasks_module' %}" class="btn btn-outline-warning">Go</a>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card dashboard-card">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">My Recent Tasks</h6>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Feedback -->
-        <div class="col-md-4">
-            <div class="card shadow border-0 h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-chat-left-text-fill display-4 text-info"></i>
-                    <h5 class="mt-3">Feedback</h5>
-                    <p>Share your thoughts and suggestions.</p>
-                    <a href="{% url 'feedback:feedback_dashboard' %}" class="btn btn-outline-info">Go</a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Communication -->
-        <div class="col-md-4">
-            <div class="card shadow border-0 h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-envelope-fill display-4 text-danger"></i>
-                    <h5 class="mt-3">Communication</h5>
-                    <p>Connect with your coordinator and stay informed.</p>
-                    <a href="{% url 'communication_module' %}" class="btn btn-outline-danger">Go</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Recognition section -->
-    <div class="row g-4">
-        <div class="col-12">
-            <div class="card shadow border-0">
                 <div class="card-body">
-                    <h2 class="mb-4">Your Recognition</h2>
-                    <div class="row">
-                        <div class="col-md-9">
-                            {% include "recognition/_recognition_widget.html" %}
-                        </div>
-                        <div class="col-md-3 d-flex align-items-center justify-content-center">
-                            <a href="{% url 'recognition:dashboard' %}" class="btn btn-primary">View Full Recognition Dashboard</a>
-                        </div>
+                    {% if recent_tasks %}
+                    <div class="table-responsive">
+                        <table class="table activity-table">
+                            <thead>
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Due Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in recent_tasks %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;">
+                                                <i class="fas fa-tasks text-primary"></i>
+                                            </div>
+                                            <strong>{{ task.title }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>{{ task.description|truncatewords:10 }}</td>
+                                    <td>
+                                        {% if task.status == 'Completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif task.status == 'In Progress' %}
+                                            <span class="badge bg-warning">In Progress</span>
+                                        {% elif task.acceptance_status == 'Accepted' %}
+                                            <span class="badge bg-info">Accepted</span>
+                                        {% elif task.acceptance_status == 'Rejected' %}
+                                            <span class="badge bg-danger">Rejected</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.due_date %}
+                                            {% if task.is_overdue %}
+                                                <span class="text-danger">{{ task.due_date|date:"M d, Y" }}</span>
+                                            {% else %}
+                                                {{ task.due_date|date:"M d, Y" }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">No due date</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.acceptance_status == 'Pending' %}
+                                            <a href="{% url 'accept_task' task.id %}" class="btn btn-sm btn-success me-1">
+                                                <i class="fas fa-check"></i> Accept
+                                            </a>
+                                            <a href="{% url 'reject_task' task.id %}" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-times"></i> Reject
+                                            </a>
+                                        {% elif task.status == 'In Progress' %}
+                                            <a href="#" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-check"></i> Complete
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'tasks_module' %}" class="btn btn-sm btn-outline-primary">
+                            View All Tasks <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-tasks text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">No tasks assigned yet</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

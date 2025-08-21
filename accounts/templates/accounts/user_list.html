@@ -1,0 +1,480 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User List - Wajibika Initiative{% endblock %}
+
+{% block extra_css %}
+<style>
+.user-card {
+    transition: transform 0.2s;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.user-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.user-avatar {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+}
+
+.user-avatar-placeholder {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-active {
+    background-color: #28a745;
+}
+
+.status-inactive {
+    background-color: #dc3545;
+}
+
+.role-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.role-admin {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+.role-coordinator {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.role-volunteer {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.action-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.search-container {
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    color: #6c757d;
+}
+
+.search-input {
+    padding-left: 40px;
+}
+
+.stats-card {
+    border-left: 4px solid;
+}
+
+.stats-card.total {
+    border-left-color: #4e73df;
+}
+
+.stats-card.active {
+    border-left-color: #1cc88a;
+}
+
+.stats-card.inactive {
+    border-left-color: #f6c23e;
+}
+
+.stats-card.volunteer {
+    border-left-color: #36b9cc;
+}
+
+.stats-card.admin {
+    border-left-color: #858796;
+}
+
+.stats-card.coordinator {
+    border-left-color: #6f42c1;
+}
+
+@media (max-width: 768px) {
+    .user-card .btn-group {
+        flex-direction: column;
+    }
+    
+    .user-card .btn-group .btn {
+        margin-bottom: 0.25rem;
+        border-radius: 0.25rem !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">User List</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                {% if user.role == 'Admin' %}
+                <a href="{% url 'register_form' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-user-plus"></i> Add User
+                </a>
+                {% endif %}
+                <a href="{% url 'manage_users' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-cogs"></i> Manage Users
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="row mb-4">
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card total shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Users</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_users }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card active shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Active</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ active_users }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card inactive shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Inactive</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ inactive_users }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-slash fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card volunteer shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Volunteers</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ volunteer_users }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-hands-helping fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card admin shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Admins</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ admin_users }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-shield fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card stats-card coordinator shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-purple text-uppercase mb-1">Coordinators</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ coordinator_users }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-tie fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="search-container">
+                <span class="search-icon"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control search-input" id="userSearch" placeholder="Search users by name, email, or role...">
+            </div>
+        </div>
+        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-secondary active" id="viewGrid">
+                    <i class="fas fa-th"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="viewList">
+                    <i class="fas fa-list"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Cards (Grid View) -->
+    <div class="row" id="userGrid">
+        {% for user_obj in users %}
+        <div class="col-xl-3 col-lg-4 col-md-6 mb-4 user-card-container">
+            <div class="card user-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            {% if user_obj.profile_picture %}
+                            <img src="{{ user_obj.profile_picture.url }}" class="rounded-circle user-avatar" alt="Profile">
+                            {% else %}
+                            <div class="rounded-circle bg-primary user-avatar-placeholder text-white">
+                                {{ user_obj.username|slice:":1"|upper }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h5 class="mb-0">{{ user_obj.get_full_name|default:user_obj.username }}</h5>
+                            <div class="d-flex align-items-center">
+                                <span class="status-indicator {% if user_obj.is_active %}status-active{% else %}status-inactive{% endif %} me-2"></span>
+                                <span class="text-muted small">{{ user_obj.email }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <span class="badge role-badge role-{{ user_obj.role|lower }}">
+                            {{ user_obj.role }}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Joined: {{ user_obj.date_joined|date:"M d, Y" }}</small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'profile_page' %}?user_id={{ user_obj.id }}" class="btn btn-sm btn-outline-primary action-btn">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if user.role in ['Admin', 'Coordinator'] %}
+                            <a href="{% url 'edit_user' user_obj.id %}" class="btn btn-sm btn-outline-secondary action-btn">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if user.role in ['Admin', 'Coordinator'] %}
+                            <a href="{% url 'toggle_user_status' user_obj.id %}" class="btn btn-sm btn-outline-{% if user_obj.is_active %}warning{% else %}success{% endif %} action-btn"
+                               onclick="return confirm('Are you sure you want to {% if user_obj.is_active %}deactivate{% else %}activate{% endif %} this user?')">
+                                <i class="fas fa-{% if user_obj.is_active %}user-slash{% else %}user-check{% endif %}"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <div class="text-muted">
+                <i class="fas fa-users fa-3x mb-3 d-block"></i>
+                <h4>No users found</h4>
+                <p>There are no users in the system yet.</p>
+                {% if user.role == 'Admin' %}
+                <a href="{% url 'register_form' %}" class="btn btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>Add First User
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- User Table (List View) - Hidden by default -->
+    <div class="table-responsive d-none" id="userTable">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">User</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Joined</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user_obj in users %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                {% if user_obj.profile_picture %}
+                                <img src="{{ user_obj.profile_picture.url }}" class="rounded-circle" width="40" height="40" alt="Profile">
+                                {% else %}
+                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 40px; height: 40px;">
+                                    {{ user_obj.username|slice:":1"|upper }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <div class="fw-bold">{{ user_obj.get_full_name|default:user_obj.username }}</div>
+                                <div class="text-muted small">{{ user_obj.email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge role-badge role-{{ user_obj.role|lower }}">
+                            {{ user_obj.role }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <span class="status-indicator {% if user_obj.is_active %}status-active{% else %}status-inactive{% endif %} me-2"></span>
+                            {% if user_obj.is_active %}Active{% else %}Inactive{% endif %}
+                        </div>
+                    </td>
+                    <td>{{ user_obj.date_joined|date:"M d, Y" }}</td>
+                    <td class="text-end">
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'profile_page' %}?user_id={{ user_obj.id }}" class="btn btn-sm btn-outline-primary action-btn" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if user.role in ['Admin', 'Coordinator'] %}
+                            <a href="{% url 'edit_user' user_obj.id %}" class="btn btn-sm btn-outline-secondary action-btn" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'toggle_user_status' user_obj.id %}" class="btn btn-sm btn-outline-{% if user_obj.is_active %}warning{% else %}success{% endif %} action-btn" 
+                               title="{% if user_obj.is_active %}Deactivate{% else %}Activate{% endif %}"
+                               onclick="return confirm('Are you sure you want to {% if user_obj.is_active %}deactivate{% else %}activate{% endif %} this user?')">
+                                <i class="fas fa-{% if user_obj.is_active %}user-slash{% else %}user-check{% endif %}"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <div class="text-muted">
+                            <i class="fas fa-users fa-3x mb-3 d-block"></i>
+                            No users found
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    const searchInput = document.getElementById('userSearch');
+    const userCards = document.querySelectorAll('.user-card-container');
+    const userTableRows = document.querySelectorAll('#userTable tbody tr');
+    
+    searchInput.addEventListener('keyup', function() {
+        const searchTerm = this.value.toLowerCase();
+        
+        // Filter grid view
+        userCards.forEach(card => {
+            const userName = card.querySelector('h5').textContent.toLowerCase();
+            const userEmail = card.querySelector('.text-muted').textContent.toLowerCase();
+            const userRole = card.querySelector('.role-badge').textContent.toLowerCase();
+            
+            if (userName.includes(searchTerm) || userEmail.includes(searchTerm) || userRole.includes(searchTerm)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        // Filter table view
+        userTableRows.forEach(row => {
+            const userName = row.querySelector('.fw-bold').textContent.toLowerCase();
+            const userEmail = row.querySelector('.text-muted').textContent.toLowerCase();
+            const userRole = row.querySelector('.role-badge').textContent.toLowerCase();
+            
+            if (userName.includes(searchTerm) || userEmail.includes(searchTerm) || userRole.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+    
+    // View toggle functionality
+    const viewGridBtn = document.getElementById('viewGrid');
+    const viewListBtn = document.getElementById('viewList');
+    const userGrid = document.getElementById('userGrid');
+    const userTable = document.getElementById('userTable');
+    
+    viewGridBtn.addEventListener('click', function() {
+        userGrid.classList.remove('d-none');
+        userTable.classList.add('d-none');
+        viewGridBtn.classList.add('active');
+        viewListBtn.classList.remove('active');
+    });
+    
+    viewListBtn.addEventListener('click', function() {
+        userGrid.classList.add('d-none');
+        userTable.classList.remove('d-none');
+        viewListBtn.classList.add('active');
+        viewGridBtn.classList.remove('active');
+    });
+});
+</script>
+{% endblock %}
