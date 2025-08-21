@@ -425,40 +425,76 @@ def assignment_list(request):
 @user_passes_test(lambda u: is_admin(u) or is_coordinator(u))
 def assign_training(request):
     """Assign training to volunteers"""
-    if request.method == 'POST':
-        form = TrainingAssignmentForm(request.POST)
-        if form.is_valid():
-            assignment = form.save()
+    try:
+        if request.method == 'POST':
+            form = TrainingAssignmentForm(request.POST)
+            if form.is_valid():
+                try:
+                    assignment = form.save(commit=False)
+                    assignment.assigned_by = request.user
+                    assignment.assigned_date = timezone.now()
+                    assignment.status = 'assigned'
+                    assignment.save()
+                    
+                    # Create training progress for each module in the course
+                    modules = assignment.course.modules.all()
+                    for module in modules:
+                        TrainingProgress.objects.get_or_create(
+                            assignment=assignment,
+                            module=module
+                        )
+                    
+                    # Send notification to volunteer
+                    from communication.models import Notification
+                    Notification.objects.create(
+                        recipient=assignment.volunteer,
+                        message=f"📚 New training assigned: {assignment.course.title}",
+                        category="training",
+                        link=f"/training/assignments/{assignment.pk}/"
+                    )
+                    
+                    # Send email notification
+                    send_training_assignment_notification(assignment)
+                    
+                    messages.success(request, 
+                        f'Training "{assignment.course.title}" assigned to {assignment.volunteer.username} successfully.')
+                    return redirect('training:assignment_detail', pk=assignment.pk)
+                except Exception as e:
+                    messages.error(request, f'Error saving assignment: {str(e)}')
+            else:
+                # Form is invalid, show errors
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"{field}: {error}")
+        else:
+            form = TrainingAssignmentForm()
             
-            # Send notification to volunteer
-            volunteer = assignment.volunteer
-            send_training_assignment_notification(assignment)
-            
-            messages.success(request, 
-                f'Training "{assignment.course.title}" assigned to {volunteer.username} successfully.')
-            return redirect('training:assignment_detail', pk=assignment.pk)
-    else:
-        form = TrainingAssignmentForm()
+            # Pre-select volunteer if provided in URL
+            volunteer_id = request.GET.get('volunteer')
+            if volunteer_id:
+                try:
+                    volunteer = Volunteer.objects.get(pk=volunteer_id)
+                    form.fields['volunteer'].initial = volunteer
+                except Volunteer.DoesNotExist:
+                    messages.warning(request, "Selected volunteer not found.")
         
-        # Pre-select volunteer if provided in URL
-        volunteer_id = request.GET.get('volunteer')
-        if volunteer_id:
-            try:
-                volunteer = Volunteer.objects.get(pk=volunteer_id)
-                form.fields['volunteer'].initial = volunteer
-            except Volunteer.DoesNotExist:
-                pass
-    
-    return render(request, 'training/assignment_form.html', {
-        'form': form,
-        'title': 'Assign Training',
-        'action': 'Assign'
-    })
+        return render(request, 'training/assignment_form.html', {
+            'form': form,
+            'title': 'Assign Training',
+            'action': 'Assign'
+        })
+    except Exception as e:
+        messages.error(request, f'An unexpected error occurred: {str(e)}')
+        return redirect('training:assignment_list')
 
 @login_required
 def assignment_detail(request, pk):
     """View details of a training assignment"""
-    assignment = get_object_or_404(TrainingAssignment, pk=pk)
+    # Use select_related to fetch related objects in a single query
+    assignment = get_object_or_404(
+        TrainingAssignment.objects.select_related('assigned_by', 'volunteer', 'course'),
+        pk=pk
+    )
     
     # Check permissions
     if not is_admin(request.user) and assignment.volunteer != request.user:
@@ -469,7 +505,10 @@ def assignment_detail(request, pk):
         except:
             return redirect('training:training_dashboard')
     
-    progress_items = TrainingProgress.objects.filter(assignment=assignment).order_by('module__order')
+    # Use prefetch_related for better performance with related progress items
+    progress_items = TrainingProgress.objects.filter(
+        assignment=assignment
+    ).select_related('module').order_by('module__order')
     
     # Calculate progress
     total_modules = progress_items.count()
@@ -478,12 +517,19 @@ def assignment_detail(request, pk):
     if total_modules > 0:
         progress_percent = int((completed_modules / total_modules) * 100)
     
+    # Prepare assigned_by_display for the template
+    if assignment.assigned_by:
+        assigned_by_display = assignment.assigned_by.get_full_name() or assignment.assigned_by.username
+    else:
+        assigned_by_display = "System"  # Or "Not specified" if you prefer
+    
     context = {
         'assignment': assignment,
         'progress_items': progress_items,
         'total_modules': total_modules,
         'completed_modules': completed_modules,
         'progress_percent': progress_percent,
+        'assigned_by_display': assigned_by_display,  # Add this to context
     }
     
     return render(request, 'training/assignment_detail.html', context)

@@ -15,20 +15,32 @@ User = get_user_model()
 @login_required
 def task_list(request):
     filter_status = request.GET.get("status")
-
+    
+    # Get base queryset based on user role
     if request.user.is_staff or request.user.role == "Coordinator":
         tasks = Task.objects.all().order_by("-created_at")
     else:
         tasks = Task.objects.filter(assigned_to=request.user).order_by("-created_at")
-
+    
+    # Apply status filter if provided
     if filter_status:
         tasks = tasks.filter(acceptance_status=filter_status)
-
-    return render(request, "tasks/tasks.html", {
+    
+    # Prepare context
+    context = {
         "tasks": tasks,
         "filter_status": filter_status,
-        "user": request.user
-    })
+        "user": request.user,
+        "status_choices": [
+            ('Pending', 'Pending'),
+            ('Accepted', 'Accepted'),
+            ('Rejected', 'Rejected'),
+            ('In Progress', 'In Progress'),
+            ('Completed', 'Completed'),
+        ]
+    }
+    
+    return render(request, "tasks/tasks.html", context)
 
 
 # ---------------------------
@@ -73,7 +85,82 @@ def create_task(request):
         "title": "Create Task",
         "users": users
     })
+@login_required
+def task_detail(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    
+    # Check permissions
+    if not (request.user.is_staff or request.user.role == "Coordinator" or task.assigned_to == request.user):
+        raise PermissionDenied("You do not have permission to view this task.")
+    
+    return render(request, "tasks/task_detail.html", {"task": task})
 
+@login_required
+def edit_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    
+    # Check permissions - only Admins or Coordinators can edit tasks
+    if not (request.user.is_staff or request.user.role == "Coordinator"):
+        raise PermissionDenied("You do not have permission to edit tasks.")
+    
+    if request.method == "POST":
+        title = request.POST.get("title")
+        description = request.POST.get("description")
+        due_date = request.POST.get("due_date")
+        assigned_to_id = request.POST.get("assigned_to")
+        
+        if not title or not assigned_to_id:
+            messages.error(request, "⚠️ Title and assigned user are required.")
+            return redirect("edit_task", task_id=task_id)
+        
+        assigned_user = get_object_or_404(User, id=assigned_to_id)
+        
+        # Update task fields
+        task.title = title
+        task.description = description
+        task.due_date = due_date if due_date else None
+        task.assigned_to = assigned_user
+        task.save()
+        
+        # Send notification to the assigned user if changed
+        if task.assigned_to != assigned_user:
+            Notification.objects.create(
+                recipient=assigned_user,
+                message=f"Task '{task.title}' has been reassigned to you"
+            )
+        
+        messages.success(request, "✅ Task updated successfully.")
+        return redirect("task_detail", task_id=task.id)
+    
+    # Show Volunteers & Coordinators as assignable
+    users = User.objects.filter(role__in=["Volunteer", "Coordinator"])
+    return render(request, "tasks/edit_task.html", {
+        "task": task,
+        "users": users,
+        "title": "Edit Task"
+    })
+
+@login_required
+def delete_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    
+    # Check permissions - only Admins or Coordinators can delete tasks
+    if not (request.user.is_staff or request.user.role == "Coordinator"):
+        raise PermissionDenied("You do not have permission to delete tasks.")
+    
+    if request.method == "POST":
+        # Send notification to the assigned user
+        if task.assigned_to:
+            Notification.objects.create(
+                recipient=task.assigned_to,
+                message=f"Task '{task.title}' assigned to you has been deleted"
+            )
+        
+        task.delete()
+        messages.success(request, "✅ Task deleted successfully.")
+        return redirect("tasks_module")
+    
+    return render(request, "tasks/delete_task.html", {"task": task})
 
 # ---------------------------
 # Volunteer accepts a task

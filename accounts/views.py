@@ -171,68 +171,7 @@ def tasks_module(request):
         tasks = Task.objects.filter(assigned_to__role="Volunteer").order_by("-created_at")
     else:
         tasks = Task.objects.filter(assigned_to=request.user).order_by("-created_at")
-    return render(request, "modules/tasks.html", {"tasks": tasks})
-
-@login_required
-def create_task(request):
-    if request.user.role not in ["Admin", "Coordinator"]:
-        messages.error(request, "You are not authorized to create tasks.")
-        return redirect("tasks_module")
-    if request.method == "POST":
-        form = TaskForm(request.POST)
-        if form.is_valid():
-            task = form.save(commit=False)
-            task.assigned_to = User.objects.get(id=request.POST.get("assigned_to"))
-            task.save()
-            messages.success(request, "✅ Task created successfully!")
-            return redirect("tasks_module")
-    else:
-        form = TaskForm()
-    return render(request, "modules/task_form.html", {"form": form, "title": "Create Task"})
-
-@login_required
-def edit_task(request, task_id):
-    task = get_object_or_404(Task, id=task_id)
-    if request.user.role not in ["Admin", "Coordinator"]:
-        messages.error(request, "You are not authorized to edit tasks.")
-        return redirect("tasks_module")
-    if request.method == "POST":
-        form = TaskForm(request.POST, instance=task)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "✅ Task updated successfully!")
-            return redirect("tasks_module")
-    else:
-        form = TaskForm(instance=task)
-    return render(request, "modules/task_form.html", {"form": form, "title": "Edit Task"})
-
-@login_required
-def delete_task(request, task_id):
-    task = get_object_or_404(Task, id=task_id)
-    if request.user.role not in ["Admin", "Coordinator"]:
-        messages.error(request, "You are not authorized to delete tasks.")
-        return redirect("tasks_module")
-    task.delete()
-    messages.success(request, "✅ Task deleted successfully!")
-    return redirect("tasks_module")
-
-@login_required
-def accept_task(request, task_id):
-    task = get_object_or_404(Task, id=task_id, assigned_to=request.user)
-    task.acceptance_status = "Accepted"
-    task.status = "In Progress"
-    task.save()
-    messages.success(request, "✅ You have accepted the task.")
-    return redirect("tasks_module")
-
-@login_required
-def reject_task(request, task_id):
-    task = get_object_or_404(Task, id=task_id, assigned_to=request.user)
-    task.acceptance_status = "Rejected"
-    task.status = "Pending"
-    task.save()
-    messages.info(request, "❌ You have rejected the task.")
-    return redirect("tasks_module")
+    return render(request, "tasks/tasks.html", {"tasks": tasks})
 
 # ---------- Other Modules ----------
 

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ task.title }} - Task Details{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">{{ task.title }}</h4>
+            <div>
+                <span class="badge 
+                    {% if task.acceptance_status == 'Pending' %}bg-secondary
+                    {% elif task.acceptance_status == 'Accepted' %}bg-info
+                    {% elif task.acceptance_status == 'Rejected' %}bg-danger
+                    {% endif %}">
+                    {{ task.acceptance_status }}
+                </span>
+                <span class="badge 
+                    {% if task.status == 'Pending' %}bg-secondary
+                    {% elif task.status == 'In Progress' %}bg-warning
+                    {% elif task.status == 'Completed' %}bg-success
+                    {% endif %} ms-2">
+                    {{ task.status }}
+                </span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <h5>Description</h5>
+                    <p>{{ task.description|linebreaks }}</p>
+                    
+                    <div class="mt-4">
+                        <h5>Task Information</h5>
+                        <table class="table table-borderless">
+                            <tr>
+                                <td width="150"><strong>Assigned To:</strong></td>
+                                <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Created At:</strong></td>
+                                <td>{{ task.created_at|date:"F d, Y g:i A" }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Due Date:</strong></td>
+                                <td>
+                                    {% if task.due_date %}
+                                        {{ task.due_date|date:"F d, Y" }}
+                                        {% if task.due_date < today and task.status != 'Completed' %}
+                                            <span class="text-danger">(Overdue)</span>
+                                        {% endif %}
+                                    {% else %}
+                                        No due date
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if task.assigned_to == request.user %}
+                                {% if task.acceptance_status == 'Pending' %}
+                                    <div class="d-grid gap-2">
+                                        <a href="{% url 'tasks:accept_task' task.id %}" class="btn btn-success">
+                                            <i class="bi bi-check-circle"></i> Accept Task
+                                        </a>
+                                        <a href="{% url 'tasks:reject_task' task.id %}" class="btn btn-danger">
+                                            <i class="bi bi-x-circle"></i> Reject Task
+                                        </a>
+                                    </div>
+                                {% elif task.acceptance_status == 'Accepted' %}
+                                    <form method="post" action="{% url 'tasks:update_task_status' task.id %}">
+                                        {% csrf_token %}
+                                        <div class="mb-3">
+                                            <label for="status" class="form-label">Update Status</label>
+                                            <select name="status" id="status" class="form-select">
+                                                <option value="In Progress" {% if task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                                <option value="Completed" {% if task.status == 'Completed' %}selected{% endif %}>Completed</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="bi bi-arrow-clockwise"></i> Update Status
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+                            
+                            <hr>
+                            
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'tasks:tasks_module' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-list"></i> Back to Tasks
+                                </a>
+                                
+                                {% if request.user.is_staff or request.user.role == "Coordinator" %}
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'tasks:edit_task' task.id %}" class="btn btn-outline-warning">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </a>
+                                        <a href="{% url 'tasks:delete_task' task.id %}" class="btn btn-outline-danger">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

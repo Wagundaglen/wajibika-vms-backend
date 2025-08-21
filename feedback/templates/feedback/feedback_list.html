@@ -147,22 +147,16 @@
                                 </div>
                             </td>
                             <td>
-                                {% if feedback.user %}
-                                    <div class="d-flex align-items-center">
-                                        <img src="{{ feedback.user.profile_picture.url|default:'/static/images/default-avatar.png' }}" 
-                                             alt="{{ feedback.user.username }}" 
-                                             class="rounded-circle me-2" 
-                                             width="30" height="30">
-                                        <div>
-                                            <div class="fw-bold">{{ feedback.user.get_full_name|default:feedback.user.username }}</div>
-                                            <small class="text-muted">{{ feedback.user.role }}</small>
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-person-circle text-muted me-2"></i>
-                                        <div>
-                                            <div class="fw-bold">{{ feedback.anonymous_name|default:'Anonymous' }}</div>
+                               {% if feedback.user %}
+    <div>
+        <div class="fw-bold">{{ feedback.user.get_full_name|default:feedback.user.username }}</div>
+        <small class="text-muted">{{ feedback.user.role }}</small>
+    </div>
+{% else %}
+    <div class="d-flex align-items-center">
+        <i class="bi bi-person-circle text-muted me-2"></i>
+        <div>
+            <div class="fw-bold">{{ feedback.anonymous_name|default:'Anonymous' }}</div>
                                             <small class="text-muted">Anonymous</small>
                                         </div>
                                     </div>

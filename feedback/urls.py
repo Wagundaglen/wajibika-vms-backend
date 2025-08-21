@@ -11,4 +11,5 @@ urlpatterns = [
     path('<int:pk>/respond/', views.FeedbackResponseCreateView.as_view(), name='feedback_respond'),
     path('<int:pk>/vote/', views.vote_feedback, name='feedback_vote'),
     path('dashboard/', views.feedback_dashboard, name='feedback_dashboard'),
+    path('<int:feedback_id>/vote/', views.vote_feedback, name='feedback_vote'),
 ]

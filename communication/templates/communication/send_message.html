@@ -1,74 +1,102 @@
-{% extends "base.html" %}
-{% block title %}
-    {% if reply_to %}Reply to Message{% else %}Send Message{% endif %}
-{% endblock %}
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container my-5">
-    <h2 class="mb-4 text-success">
-        {% if reply_to %}
-            <i class="bi bi-reply"></i> Reply to {{ reply_username }}
-        {% else %}
-            📤 Send Message
-        {% endif %}
-    </h2>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} shadow-sm">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-
-    <form method="post" class="shadow-sm p-4 bg-white rounded">
-        {% csrf_token %}
-
-        <!-- Subject -->
-        <div class="mb-3">
-            <label class="form-label fw-bold">Subject</label>
-            <input type="text" name="subject" 
-                   class="form-control" 
-                   value="{{ subject_prefill|default:'' }}" 
-                   placeholder="Optional subject">
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>{{ title }}</h2>
+                <a href="{% url 'inbox' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Inbox
+                </a>
+            </div>
+            
+            {% if reply_to %}
+                <!-- Original Message Section -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0">Original Message</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <span class="fw-bold">From:</span> {{ reply_username }}
+                        </div>
+                        {% if subject_prefill %}
+                            <div class="mb-3">
+                                <span class="fw-bold">Subject:</span> {{ subject_prefill }}
+                            </div>
+                        {% endif %}
+                        <div class="border rounded p-3 bg-light">
+                            <div class="message-content">
+                                {{ body_prefill|linebreaksbr }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Compose Message Section -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">{{ action }} Message</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Subject</label>
+                            <input type="text" class="form-control" id="subject" name="subject" 
+                                   value="{{ subject_prefill }}" required>
+                        </div>
+                        
+                        {% if not reply_to %}
+                            <div class="mb-3">
+                                <label class="form-label">Recipients</label>
+                                <select multiple class="form-select" name="recipients" size="5" required>
+                                    {% for user in users %}
+                                        <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Hold Ctrl (or Cmd on Mac) to select multiple recipients.</div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="is_broadcast" name="is_broadcast">
+                                <label class="form-check-label" for="is_broadcast">
+                                    Send as broadcast message
+                                </label>
+                            </div>
+                        {% else %}
+                            <input type="hidden" name="recipients" value="{{ reply_to }}">
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="body" class="form-label">Message</label>
+                            <textarea class="form-control" id="body" name="body" rows="8" required>{{ body_prefill }}</textarea>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-1"></i> {{ action }} Message
+                            </button>
+                            <a href="{% url 'inbox' %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-
-        <!-- Message Body -->
-        <div class="mb-3">
-            <label class="form-label fw-bold">Message Body</label>
-            <textarea name="body" class="form-control" rows="6" required>{{ body_prefill|default:'' }}</textarea>
-        </div>
-
-        {% if user.role != "Volunteer" %}
-        <!-- Broadcast Option -->
-        <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" name="is_broadcast" id="isBroadcast">
-            <label class="form-check-label" for="isBroadcast">
-                Send as Broadcast
-            </label>
-        </div>
-        {% endif %}
-
-        <!-- Recipients -->
-        {% if not is_broadcast %}
-        <div class="mb-3">
-            <label class="form-label fw-bold">Select Recipients</label>
-            <select name="recipients" class="form-select" multiple {% if reply_to %}disabled{% endif %}>
-                {% for u in users %}
-                    <option value="{{ u.id }}" 
-                        {% if reply_to and reply_to|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
-                        {{ u.get_full_name|default:u.username }} ({{ u.role }})
-                    </option>
-                {% endfor %}
-            </select>
-            <small class="text-muted">Hold CTRL/CMD to select multiple recipients.</small>
-        </div>
-        {% endif %}
-
-        <div class="mt-4">
-            <button type="submit" class="btn btn-success px-4">
-                {% if reply_to %}<i class="bi bi-reply"></i> Send Reply{% else %}Send Message{% endif %}
-            </button>
-            <a href="{% url 'inbox' %}" class="btn btn-secondary">Cancel</a>
-        </div>
-    </form>
+    </div>
 </div>
+
+<style>
+.message-content {
+    white-space: pre-wrap;
+    line-height: 1.6;
+}
+</style>
 {% endblock %}

@@ -1,24 +1,124 @@
-{% if assignment.status == 'completed' %}
-    <div class="card mt-4">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0">Certificate</h5>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h6 class="text-success mb-1">Congratulations! You have completed this training.</h6>
-                    <p class="mb-0">Your certificate of completion has been generated.</p>
-                    <p class="small text-muted mb-0">Certificate ID: {{ assignment.certificate.certificate_id }}</p>
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Training Assignment - {{ assignment.course.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Assignment Header -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-1">{{ assignment.course.title }}</h4>
+                            <p class="text-muted mb-0">Assigned to: {{ assignment.volunteer.get_full_name|default:assignment.volunteer.username }}</p>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{{ assignment.status|yesno:'success,warning,danger' }}">
+                                {{ assignment.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4 text-end">
-                    <a href="{% url 'training:view_certificate' assignment.certificate.pk %}" class="btn btn-success">
-                        <i class="bi bi-award"></i> View Certificate
-                    </a>
-                    <a href="{% url 'training:download_certificate' assignment.certificate.pk %}" class="btn btn-outline-success ms-2">
-                        <i class="bi bi-download"></i> Download
-                    </a>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Assigned Date:</strong> {{ assignment.assigned_date|date:"F d, Y" }}</p>
+                            {% if assignment.due_date %}
+                                <p><strong>Due Date:</strong> {{ assignment.due_date|date:"F d, Y" }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Assigned By:</strong> {{ assigned_by_display }}</p>
+                            {% if assignment.completed_at %}
+                                <p><strong>Completed At:</strong> {{ assignment.completed_at|date:"F d, Y" }}</p>
+                            {% endif %}
+                            {% if assignment.completed_at %}
+                                <p><strong>Completed At:</strong> {{ assignment.completed_at|date:"F d, Y" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Progress Section -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">Training Progress</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Completion</span>
+                            <span>{{ progress_percent }}%</span>
+                        </div>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ progress_percent }}%;" 
+                                 aria-valuenow="{{ progress_percent }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0">
+                        Completed {{ completed_modules }} of {{ total_modules }} modules
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Modules Section -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">Course Modules</h5>
+                </div>
+                <div class="card-body">
+                    {% if progress_items %}
+                        <div class="list-group">
+                            {% for progress in progress_items %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ progress.module.title }}</h6>
+                                            <p class="text-muted mb-0">{{ progress.module.duration }} minutes</p>
+                                        </div>
+                                        <div>
+                                            {% if progress.is_completed %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif progress.started_at %}
+                                                <span class="badge bg-warning">In Progress</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Not Started</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if not progress.is_completed %}
+                                        <div class="mt-2">
+                                            {% if progress.started_at %}
+                                                <a href="{% url 'training:complete_module' assignment.pk progress.module.pk %}" 
+                                                   class="btn btn-sm btn-success">
+                                                    <i class="bi bi-check-circle"></i> Mark as Complete
+                                                </a>
+                                            {% else %}
+                                                <a href="{% url 'training:start_module' assignment.pk progress.module.pk %}" 
+                                                   class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-play-circle"></i> Start Module
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p class="text-muted mb-0">No modules found for this course.</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
-{% endif %}
+</div>
+{% endblock %}

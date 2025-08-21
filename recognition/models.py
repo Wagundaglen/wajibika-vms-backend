@@ -1,9 +1,9 @@
-from django.db import models
+from django.db import models, transaction
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from datetime import timedelta
-from django.db.models import Sum  # Import Sum here
-from accounts.models import Volunteer  # Import your custom Volunteer model
+from django.db.models import Sum
+from accounts.models import Volunteer
 
 class Team(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -31,9 +31,9 @@ class Badge(models.Model):
     
     name = models.CharField(max_length=100)
     description = models.TextField()
-    icon = models.CharField(max_length=50, blank=True)  # Icon class name
+    icon = models.CharField(max_length=50, blank=True)
     points_value = models.IntegerField(validators=[MinValueValidator(0)])
-    criteria = models.JSONField(default=dict)  # Stores achievement rules
+    criteria = models.JSONField(default=dict)
     scope = models.CharField(max_length=10, choices=SCOPE_CHOICES, default='system')
     team = models.ForeignKey(Team, on_delete=models.CASCADE, null=True, blank=True)
     created_by = models.ForeignKey(Volunteer, on_delete=models.SET_NULL, null=True)
@@ -52,27 +52,35 @@ class Recognition(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     def save(self, *args, **kwargs):
-        # Update volunteer's total points
-        profile, created = RecognitionProfile.objects.get_or_create(volunteer=self.volunteer)
-        profile.total_points += self.points
-        profile.save()
+        # Check if this is a new instance
+        is_new = self.pk is None
         
-        # Log points
-        PointsLog.objects.create(
-            volunteer=self.volunteer,
-            points=self.points,
-            activity=f"Received recognition: {self.message or 'No message'}",
-            related_recognition=self
-        )
-        
+        # Save the Recognition first to get an ID
         super().save(*args, **kwargs)
+        
+        # Only update points and create log for new instances
+        if is_new:
+            # Use a transaction to ensure atomicity
+            with transaction.atomic():
+                # Update volunteer's total points
+                profile, created = RecognitionProfile.objects.get_or_create(volunteer=self.volunteer)
+                profile.total_points += self.points
+                profile.save()
+                
+                # Log points
+                PointsLog.objects.create(
+                    volunteer=self.volunteer,
+                    points=self.points,
+                    activity=f"Received recognition: {self.message or 'No message'}",
+                    related_recognition=self
+                )
 
 class PointsLog(models.Model):
     volunteer = models.ForeignKey(Volunteer, on_delete=models.CASCADE, related_name='points_logs')
     points = models.IntegerField()
     activity = models.CharField(max_length=255)
     timestamp = models.DateTimeField(auto_now_add=True)
-    related_recognition = models.ForeignKey(Recognition, on_delete=models.CASCADE, null=True, blank=True)
+    related_recognition = models.ForeignKey('recognition.Recognition', on_delete=models.CASCADE, null=True, blank=True)
     
     def __str__(self):
         return f"{self.volunteer.username}: {self.points} points - {self.activity}"
@@ -124,7 +132,7 @@ class Leaderboard(models.Model):
             
             # Calculate points for each volunteer
             volunteer_points = recognitions.values('volunteer').annotate(
-                total_points=Sum('points')  # Use Sum directly, not models.Sum
+                total_points=Sum('points')
             ).order_by('-total_points')
             
             # Clear existing leaderboard entries
@@ -138,7 +146,7 @@ class Leaderboard(models.Model):
                     rank=rank,
                     timeframe=timeframe,
                     team=team
-            )
+                )
                 
             return f"Successfully updated {timeframe} leaderboard"
         except Exception as e:
