@@ -41,8 +41,9 @@ urlpatterns = [
     path('modules/manage-users/', login_required(views.manage_users), name='manage_users'),
     path('modules/manage-users/<int:user_id>/toggle-status/', login_required(views.toggle_user_status), name='toggle_user_status'),
     path('modules/manage-users/<int:user_id>/delete/', login_required(views.delete_user), name='delete_user'),
-    path('modules/manage-users/<int:user_id>/edit/', login_required(views.edit_user), name='edit_user'),  
-    path("users/", views.user_list, name="list"),
+    path('modules/manage-users/<int:user_id>/edit/', login_required(views.edit_user), name='edit_user'),  # ✅ NEW EDIT USER ROUTE
+    
+
 
     path('modules/settings/', login_required(views.settings_module), name='settings_module'),
 

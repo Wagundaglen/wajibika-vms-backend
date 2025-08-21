@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}
+    {% if reply_to %}Reply to Message{% else %}Send Message{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4 text-success">
+        {% if reply_to %}
+            <i class="bi bi-reply"></i> Reply to {{ reply_username }}
+        {% else %}
+            📤 Send Message
+        {% endif %}
+    </h2>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} shadow-sm">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" class="shadow-sm p-4 bg-white rounded">
+        {% csrf_token %}
+
+        <!-- Subject -->
+        <div class="mb-3">
+            <label class="form-label fw-bold">Subject</label>
+            <input type="text" name="subject" 
+                   class="form-control" 
+                   value="{{ subject_prefill|default:'' }}" 
+                   placeholder="Optional subject">
+        </div>
+
+        <!-- Message Body -->
+        <div class="mb-3">
+            <label class="form-label fw-bold">Message Body</label>
+            <textarea name="body" class="form-control" rows="6" required>{{ body_prefill|default:'' }}</textarea>
+        </div>
+
+        {% if user.role != "Volunteer" %}
+        <!-- Broadcast Option -->
+        <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" name="is_broadcast" id="isBroadcast">
+            <label class="form-check-label" for="isBroadcast">
+                Send as Broadcast
+            </label>
+        </div>
+        {% endif %}
+
+        <!-- Recipients -->
+        {% if not is_broadcast %}
+        <div class="mb-3">
+            <label class="form-label fw-bold">Select Recipients</label>
+            <select name="recipients" class="form-select" multiple {% if reply_to %}disabled{% endif %}>
+                {% for u in users %}
+                    <option value="{{ u.id }}" 
+                        {% if reply_to and reply_to|stringformat:"s" == u.id|stringformat:"s" %}selected{% endif %}>
+                        {{ u.get_full_name|default:u.username }} ({{ u.role }})
+                    </option>
+                {% endfor %}
+            </select>
+            <small class="text-muted">Hold CTRL/CMD to select multiple recipients.</small>
+        </div>
+        {% endif %}
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success px-4">
+                {% if reply_to %}<i class="bi bi-reply"></i> Send Reply{% else %}Send Message{% endif %}
+            </button>
+            <a href="{% url 'inbox' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

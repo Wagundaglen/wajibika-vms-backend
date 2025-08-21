@@ -56,7 +56,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
 ]
 
 ROOT_URLCONF = 'vms.urls'
@@ -73,13 +72,10 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'communication.context_processors.notification_count',
+                'communication.context_processors.unread_counts',
                 'recognition.context_processors.recognition_data',
                 'feedback.context_processors.feedback_stats',
-                'tasks.context_processors.task_notifications',
-                'tasks.context_processors.task_statistics',
-                'communication.context_processors.user_role',
-                'accounts.context_processors.notifications',
+
             ],
         },
     },
@@ -91,7 +87,7 @@ WSGI_APPLICATION = 'vms.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'vms_db',
+        'NAME': 'wajibika_vms_db',
         'USER': 'postgres',
         'PASSWORD': 'glen1234',
         'HOST': 'localhost',

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Inbox{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">📥 Inbox</h2>
+
+    {% if messages_list %}
+        <div class="list-group">
+            {% for msg in messages_list %}
+                <a href="{% url 'read_message' msg.id %}" 
+                   class="list-group-item list-group-item-action {% if user not in msg.read_by.all %}fw-bold{% endif %}">
+                    <strong>{{ msg.sender.get_full_name|default:msg.sender.username }}</strong>
+                    — {{ msg.subject|default:msg.body|truncatechars:50 }}
+                    <span class="text-muted float-end">{{ msg.created_at|date:"M d, Y H:i" }}</span>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-muted">No messages yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
