@@ -5,6 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.urls import reverse
+from django.http import JsonResponse
 from .models import Notification, Message
 
 User = get_user_model()
@@ -15,9 +16,11 @@ User = get_user_model()
 # ============================
 @login_required
 def notifications_list(request):
+    """List all notifications for the logged-in user"""
     notifications = Notification.objects.filter(
         recipient=request.user
     ).order_by('-created_at')
+
     return render(request, "communication/notifications.html", {
         "notifications": notifications
     })
@@ -25,21 +28,37 @@ def notifications_list(request):
 
 @login_required
 def mark_notification_read(request, notification_id):
+    """Mark a single notification as read"""
     notification = get_object_or_404(Notification, id=notification_id, recipient=request.user)
     notification.is_read = True
     notification.save()
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"success": True, "id": notification_id})
+
     messages.success(request, "Notification marked as read.")
     return redirect("notifications_list")
 
 
 @login_required
 def mark_all_notifications_read(request):
-    Notification.objects.filter(
-        recipient=request.user,
-        is_read=False
+    """Mark all unread notifications as read"""
+    updated = Notification.objects.filter(
+        recipient=request.user, is_read=False
     ).update(is_read=True)
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"success": True, "count": updated})
+
     messages.success(request, "All notifications marked as read.")
     return redirect("notifications_list")
+
+
+@login_required
+def unread_notifications_count(request):
+    """Return count of unread notifications (for navbar badge)"""
+    count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+    return JsonResponse({"unread_count": count})
 
 
 # ============================
@@ -47,6 +66,7 @@ def mark_all_notifications_read(request):
 # ============================
 @login_required
 def inbox(request):
+    """Inbox with messages received by user"""
     messages_qs = Message.objects.filter(
         recipients=request.user
     ).order_by('-created_at')
@@ -55,6 +75,7 @@ def inbox(request):
 
 @login_required
 def sent_messages(request):
+    """Messages sent by user"""
     messages_qs = Message.objects.filter(
         sender=request.user
     ).order_by('-created_at')
@@ -63,6 +84,7 @@ def sent_messages(request):
 
 @login_required
 def read_message(request, message_id):
+    """Read a specific message (mark as read for recipient)"""
     message_obj = get_object_or_404(
         Message,
         Q(recipients=request.user) | Q(sender=request.user),
@@ -83,7 +105,7 @@ def send_message(request):
     body_prefill = ""
     preselected_user = None
 
-    # Pre-fill recipient & message content when replying
+    # Pre-fill when replying
     if reply_to:
         preselected_user = get_object_or_404(User, id=reply_to)
         original_message = Message.objects.filter(
@@ -132,7 +154,7 @@ def send_message(request):
         )
         message_obj.recipients.set(recipients)
 
-        # Notify recipients
+        # Create notifications for recipients
         for recipient in recipients:
             Notification.objects.create(
                 recipient=recipient,
@@ -144,7 +166,7 @@ def send_message(request):
         messages.success(request, "Message sent successfully.")
         return redirect("sent_messages")
 
-    # User list for selection
+    # List possible recipients
     if request.user.role == "Volunteer":
         users = User.objects.filter(Q(role="Admin") | Q(role="Coordinator"))
     else:
