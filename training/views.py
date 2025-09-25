@@ -9,6 +9,7 @@ from django.core.paginator import Paginator
 from django.core.mail import send_mail
 from django.conf import settings
 import uuid
+import logging
 
 from .models import (
     TrainingCourse, TrainingModule, TrainingAssignment, 
@@ -16,6 +17,9 @@ from .models import (
 )
 from accounts.models import Volunteer
 from .forms import TrainingCourseForm, TrainingModuleForm, TrainingAssignmentForm
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 # Helper functions for role checking
 def is_admin(user):
@@ -427,7 +431,8 @@ def assign_training(request):
     """Assign training to volunteers"""
     try:
         if request.method == 'POST':
-            form = TrainingAssignmentForm(request.POST)
+            # Pass the current user to the form
+            form = TrainingAssignmentForm(request.POST, user=request.user)
             if form.is_valid():
                 try:
                     assignment = form.save(commit=False)
@@ -460,6 +465,7 @@ def assign_training(request):
                         f'Training "{assignment.course.title}" assigned to {assignment.volunteer.username} successfully.')
                     return redirect('training:assignment_detail', pk=assignment.pk)
                 except Exception as e:
+                    logger.error(f"Error saving assignment: {str(e)}")
                     messages.error(request, f'Error saving assignment: {str(e)}')
             else:
                 # Form is invalid, show errors
@@ -467,7 +473,14 @@ def assign_training(request):
                     for error in errors:
                         messages.error(request, f"{field}: {error}")
         else:
-            form = TrainingAssignmentForm()
+            # Pass the current user to the form
+            form = TrainingAssignmentForm(user=request.user)
+            
+            # Debug: Check available volunteers
+            available_volunteers = Volunteer.objects.filter(role='Volunteer')
+            logger.info(f"Available volunteers: {available_volunteers.count()}")
+            for vol in available_volunteers:
+                logger.info(f"- {vol.username} ({vol.role})")
             
             # Pre-select volunteer if provided in URL
             volunteer_id = request.GET.get('volunteer')
@@ -484,6 +497,7 @@ def assign_training(request):
             'action': 'Assign'
         })
     except Exception as e:
+        logger.error(f"Unexpected error in assign_training: {str(e)}")
         messages.error(request, f'An unexpected error occurred: {str(e)}')
         return redirect('training:assignment_list')
 
@@ -541,13 +555,15 @@ def assignment_update(request, pk):
     assignment = get_object_or_404(TrainingAssignment, pk=pk)
     
     if request.method == 'POST':
-        form = TrainingAssignmentForm(request.POST, instance=assignment)
+        # Pass the current user to the form
+        form = TrainingAssignmentForm(request.POST, instance=assignment, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Training assignment updated successfully.')
             return redirect('training:assignment_detail', pk=assignment.pk)
     else:
-        form = TrainingAssignmentForm(instance=assignment)
+        # Pass the current user to the form
+        form = TrainingAssignmentForm(instance=assignment, user=request.user)
     
     return render(request, 'training/assignment_form.html', {
         'form': form,
@@ -597,15 +613,39 @@ def start_module(request, assignment_pk, module_pk):
         assignment.status = 'in_progress'
         assignment.save()
     
-    return render(request, 'training/module_view.html', {
+    # Calculate progress
+    total_modules = assignment.course.modules.count()
+    completed_modules = assignment.progress.filter(is_completed=True).count()
+    progress_percent = 0
+    if total_modules > 0:
+        progress_percent = int((completed_modules / total_modules) * 100)
+    
+    # Calculate time spent components
+    time_spent_days = 0
+    time_spent_hours = 0
+    time_spent_minutes = 0
+    
+    if progress.time_spent:
+        total_seconds = int(progress.time_spent.total_seconds())
+        time_spent_days = total_seconds // (24 * 3600)
+        time_spent_hours = (total_seconds % (24 * 3600)) // 3600
+        time_spent_minutes = (total_seconds % 3600) // 60
+    
+    context = {
         'assignment': assignment,
         'module': module,
         'progress': progress,
-    })
+        'progress_percent': progress_percent,
+        'time_spent_days': time_spent_days,
+        'time_spent_hours': time_spent_hours,
+        'time_spent_minutes': time_spent_minutes,
+    }
+    
+    return render(request, 'training/module_view.html', context)
 
 @login_required
 def complete_module(request, assignment_pk, module_pk):
-    """Mark a module as completed"""
+    """Mark a module as completed and redirect to next module"""
     assignment = get_object_or_404(TrainingAssignment, pk=assignment_pk)
     module = get_object_or_404(TrainingModule, pk=module_pk)
     
@@ -617,10 +657,55 @@ def complete_module(request, assignment_pk, module_pk):
         progress = TrainingProgress.objects.get(assignment=assignment, module=module)
         progress.mark_completed()
         messages.success(request, f'Module "{module.title}" completed successfully!')
+        
+        # Try to find the next module in the course
+        next_module = None
+        current_order = module.order
+        
+        # Get all modules for this course, ordered by order
+        all_modules = assignment.course.modules.all().order_by('order')
+        
+        # Find the next module
+        for mod in all_modules:
+            if mod.order > current_order:
+                next_module = mod
+                break
+        
+        # If there's a next module, redirect to it
+        if next_module:
+            messages.info(request, f'Continuing to next module: {next_module.title}')
+            return redirect('training:start_module', assignment_pk=assignment.pk, module_pk=next_module.pk)
+        else:
+            # If this was the last module, check if the entire course is now completed
+            all_completed = True
+            for mod in all_modules:
+                mod_progress = TrainingProgress.objects.filter(
+                    assignment=assignment,
+                    module=mod,
+                    is_completed=True
+                ).exists()
+                if not mod_progress:
+                    all_completed = False
+                    break
+            
+            # If all modules are completed, show a special message
+            if all_completed:
+                messages.success(request, 'Congratulations! You have completed all modules in this course!')
+                # Check if certificate already exists
+                if not hasattr(assignment, 'certificate'):
+                    # Generate certificate
+                    Certificate.objects.create(
+                        assignment=assignment,
+                        issued_date=timezone.now()
+                    )
+                    messages.success(request, 'Certificate generated successfully!')
+            
+            # Redirect to assignment detail page
+            return redirect('training:assignment_detail', pk=assignment_pk)
+            
     except TrainingProgress.DoesNotExist:
         messages.error(request, 'Module progress not found.')
-    
-    return redirect('training:assignment_detail', pk=assignment_pk)
+        return redirect('training:assignment_detail', pk=assignment_pk)
 
 # Certificate views
 @login_required
@@ -675,7 +760,7 @@ def my_training(request):
         return render(request, 'training/my_training.html', context)
     except Exception as e:
         # Log the error for debugging
-        print(f"Error in my_training view: {e}")
+        logger.error(f"Error in my_training view: {str(e)}")
         # Return a simple error message
         return render(request, 'training/my_training.html', {'error': str(e)})
 
@@ -694,7 +779,7 @@ def my_certificates(request):
         return render(request, 'training/my_certificates.html', context)
     except Exception as e:
         # Log the error for debugging
-        print(f"Error in my_certificates view: {e}")
+        logger.error(f"Error in my_certificates view: {str(e)}")
         # Return a simple error message
         return render(request, 'training/my_certificates.html', {'error': str(e)})
 

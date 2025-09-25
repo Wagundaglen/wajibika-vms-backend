@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ module.title }} - {{ assignment.course.title }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Progress Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 text-muted">{{ assignment.course.title }}</h6>
+                            <h5 class="mb-0">{{ module.title }}</h5>
+                        </div>
+                        <div class="text-end">
+                            {% if progress.is_completed %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle-fill"></i> Completed
+                                </span>
+                            {% elif progress.started_at %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-clock-fill"></i> In Progress
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-play-circle"></i> Not Started
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Module Progress</span>
+                            <span>{{ progress_percent }}%</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" 
+                                 role="progressbar" 
+                                 style="width: {{ progress_percent }}%"
+                                 aria-valuenow="{{ progress_percent }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module Content Card -->
+            <div class="card shadow">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Module Content</h5>
+                        <div class="small text-muted">
+                            Module {{ module.order }} of {{ assignment.course.modules.count }}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="module-content">
+                        {{ module.content|linebreaks }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{% url 'training:assignment_detail' assignment.pk %}" 
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Assignment
+                </a>
+                
+                <div>
+                    {% if not progress.is_completed %}
+                        <!-- Check if this is the last module -->
+                        {% with next_module_exists=False %}
+                            {% for other_module in assignment.course.modules.all %}
+                                {% if other_module.order > module.order %}
+                                    {% if not next_module_exists %}
+                                        {% with next_module_exists=True %}
+                                        {% endwith %}
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if next_module_exists %}
+                                <form method="post" action="{% url 'training:complete_module' assignment.pk module.pk %}" 
+                                      class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success" 
+                                            onclick="return confirm('Are you sure you have completed this module?')">
+                                        <i class="bi bi-check-circle"></i> Mark as Completed
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form method="post" action="{% url 'training:complete_module' assignment.pk module.pk %}" 
+                                      class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success" 
+                                            onclick="return confirm('Are you sure you have completed this module? This will complete the entire course.')">
+                                        <i class="bi bi-check-circle"></i> Complete Course
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% endwith %}
+                    {% else %}
+                        <span class="text-success">
+                            <i class="bi bi-check-circle-fill"></i> Module completed on 
+                            {{ progress.completed_at|date:"F d, Y" }}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Course Progress Overview -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Course Progress Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1">
+                                <strong>Course:</strong> {{ assignment.course.title }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>Total Modules:</strong> {{ assignment.course.modules.count }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>Completed Modules:</strong> {{ completed_modules }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1">
+                                <strong>Overall Progress:</strong> {{ progress_percent }}%
+                            </p>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-info" 
+                                     role="progressbar" 
+                                     style="width: {{ progress_percent }}%"
+                                     aria-valuenow="{{ progress_percent }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Modules List -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">All Modules in This Course</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for course_module in assignment.course.modules.all %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center {% if course_module == module %}active{% endif %}">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-primary me-2">{{ course_module.order }}</span>
+                                    <div>
+                                        <strong>{{ course_module.title }}</strong>
+                                        {% if course_module == module %}
+                                            <span class="text-muted">(Current Module)</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div>
+                                    {% for module_progress in assignment.progress.all %}
+                                        {% if module_progress.module == course_module %}
+                                            {% if module_progress.is_completed %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif module_progress.started_at %}
+                                                <span class="badge bg-warning text-dark">In Progress</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Not Started</span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if course_module != module and not progress.is_completed %}
+                                        <a href="{% url 'training:start_module' assignment.pk course_module.pk %}" 
+                                           class="btn btn-sm btn-outline-primary ms-2">
+                                            {% if course_module.order > module.order %}
+                                                Next
+                                            {% else %}
+                                                View
+                                            {% endif %}
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module Info -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-body">
+                    <h6 class="card-title">Module Information</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-1">
+                                <strong>Started:</strong> 
+                                {% if progress.started_at %}
+                                    {{ progress.started_at|date:"F d, Y, P" }}
+                                {% else %}
+                                    <span class="text-muted">Not started</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-1">
+                                <strong>Time Spent:</strong> 
+                                {% if progress.time_spent %}
+                                    {% if time_spent_days > 0 %}
+                                        {{ time_spent_days }}d 
+                                    {% endif %}
+                                    {% if time_spent_hours > 0 %}
+                                        {{ time_spent_hours }}h 
+                                    {% endif %}
+                                    {{ time_spent_minutes }}m
+                                {% else %}
+                                    <span class="text-muted">Not tracked</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom JavaScript for module tracking -->
+{% block extra_js %}
+<script>
+// Track time spent on module
+let startTime = Date.now();
+let moduleStartTime = new Date();
+
+// Update time spent every minute
+setInterval(function() {
+    let timeSpent = Math.floor((Date.now() - startTime) / 1000);
+    console.log('Time spent on module: ' + timeSpent + ' seconds');
+}, 60000);
+
+// Warn before leaving if module not completed
+window.addEventListener('beforeunload', function(e) {
+    {% if not progress.is_completed %}
+        e.preventDefault();
+        e.returnValue = '';
+    {% endif %}
+});
+
+// Auto-save progress periodically (if implemented)
+setInterval(function() {
+    // This could be enhanced to auto-save progress via AJAX
+    console.log('Auto-saving progress...');
+}, 30000); // Every 30 seconds
+</script>
+
+<style>
+.module-content {
+    line-height: 1.8;
+    color: #333;
+}
+
+.module-content h1, .module-content h2, .module-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.module-content h4, .module-content h5, .module-content h6 {
+    margin-top: 1.2rem;
+    margin-bottom: 0.8rem;
+    color: #34495e;
+}
+
+.module-content p {
+    margin-bottom: 1rem;
+}
+
+.module-content ul, .module-content ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.module-content li {
+    margin-bottom: 0.5rem;
+}
+
+.module-content blockquote {
+    border-left: 4px solid #3498db;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.module-content code {
+    background-color: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.module-content pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+.module-content table {
+    width: 100%;
+    margin: 1rem 0;
+    border-collapse: collapse;
+}
+
+.module-content th, .module-content td {
+    border: 1px solid #dee2e6;
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.module-content th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+.list-group-item.active {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+}
+</style>
+{% endblock %}
+{% endblock %}

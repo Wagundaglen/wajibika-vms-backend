@@ -1,3 +1,4 @@
+# training/forms.py
 from django import forms
 from .models import TrainingCourse, TrainingModule, TrainingAssignment
 from accounts.models import Volunteer
@@ -43,16 +44,22 @@ class TrainingAssignmentForm(forms.ModelForm):
         # Filter volunteers based on user role
         if user and (user.is_staff or user.role == 'Admin'):
             # Admins can see all volunteers
-            self.fields['volunteer'].queryset = Volunteer.objects.filter(role='Volunteer', is_approved=True)
+            self.fields['volunteer'].queryset = Volunteer.objects.filter(role='Volunteer')
         elif user and user.role == 'Coordinator':
             # Coordinators can only see volunteers in their team (if team model exists)
             try:
                 from accounts.models import Team
-                team_volunteers = Volunteer.objects.filter(team=user.team, role='Volunteer', is_approved=True)
+                team_volunteers = Volunteer.objects.filter(team=user.team, role='Volunteer')
                 self.fields['volunteer'].queryset = team_volunteers
             except:
                 # If Team model doesn't exist, show all volunteers
-                self.fields['volunteer'].queryset = Volunteer.objects.filter(role='Volunteer', is_approved=True)
+                self.fields['volunteer'].queryset = Volunteer.objects.filter(role='Volunteer')
         else:
             # Other users can't assign training
             self.fields['volunteer'].queryset = Volunteer.objects.none()
+        
+        # Add a helpful label for the volunteer field
+        self.fields['volunteer'].label = "Select Volunteer"
+        
+        # Set empty label for the dropdown
+        self.fields['volunteer'].empty_label = "Choose a volunteer..."
